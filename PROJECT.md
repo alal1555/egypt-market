@@ -5,6 +5,7 @@ Classifieds marketplace for Egypt — buy/sell vehicles, properties, pets, elect
 - **Repo:** https://github.com/alal1555/egypt-market
 - **Owner:** Aly (`alal1555`)
 - **Primary color:** `#FF6321`
+- **Last updated:** Aug 8, 2026
 
 ---
 
@@ -43,7 +44,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 ### Dev notes
 
-- Use **one** dev server at a time. If Turbopack/HMR errors appear, delete `.next` and restart.
+- Use **one** dev server at a time. If port 3000 is in use, kill the stuck process before restarting.
+- If Turbopack/HMR errors appear, delete `.next` and restart (dev uses Webpack, but stale cache can still cause issues).
 - `next.config.ts` has `allowedDevOrigins: ['192.168.8.100']` for LAN access.
 - Low disk space on C: can corrupt `.next` cache — keep 8–10 GB free.
 
@@ -58,7 +60,8 @@ src/
 ├── constants/        # categoryConfig.ts — category/attribute schema
 ├── lib/              # supabase.ts, utils.ts, vehicleService.ts
 └── data/             # ads.ts — unused mock data (dead code)
-public/               # Static assets (logo.png referenced but may be missing)
+.cursor/rules/        # yaddii-marketplace.mdc — always-on AI context rule
+public/               # Static assets (logo.png)
 ```
 
 No API routes. No Supabase migrations in repo. All auth checks are **client-side** (no middleware).
@@ -69,8 +72,8 @@ No API routes. No Supabase migrations in repo. All auth checks are **client-side
 
 | Route | Purpose |
 |-------|---------|
-| `/` | Home feed — active ads, category filter |
-| `/search` | Search + attribute filters |
+| `/` | Home feed — all active ads; category bar navigates to search |
+| `/search` | Search + category/attribute filters (`?q=`, `?main_cat=`, `?sub_cat=`) |
 | `/product/[id]` | Ad detail, call/WhatsApp seller |
 | `/post-ad` | Create listing (status → `pending`) |
 | `/my-ads` | User's listings |
@@ -83,6 +86,18 @@ No API routes. No Supabase migrations in repo. All auth checks are **client-side
 | `/auth/callback` | Forwards hash to `/reset-password` |
 | `/profile` | View/edit name & phone (client-only, no SSR) |
 | `/admin/dashboard` | Ad approval + super-admin role management |
+
+---
+
+## Mobile Layout
+
+| Element | Mobile behavior |
+|---------|-----------------|
+| **Navbar** | Logo row + auth buttons, then search bar row below (`md:hidden`) |
+| **Header height** | ~102px total on mobile (layout uses `pt-[102px]`) |
+| **CategoryBar** | Fixed at `top-[102px]` on mobile, `top-[64px]` on desktop |
+| **BottomNav** | Fixed bottom tabs: Explore, Favorites, Post Ad, My Ads, Admin, Profile |
+| **Search** | Navbar search submits to `/search?q=...` on all pages |
 
 ---
 
@@ -110,6 +125,7 @@ Single source of truth: `src/constants/categoryConfig.ts`
 - Each sub-category has typed attributes: `text | number | select | toggle | range`
 - Helpers: `getAttributesBySlug()`, `getCategoryGroups()`
 - Rent vehicle slugs: `vr_buses`, `vr_trucks`, `vr_motorcycles`, `vr_parts`
+- **Home CategoryBar:** selecting a sub-category navigates to `/search?main_cat={main}&sub_cat={sub}`
 
 ---
 
@@ -142,8 +158,10 @@ No email verification gate. No OAuth.
 2. **Profile SSR disabled** — `dynamic(..., { ssr: false })` + auth timeout to avoid hydration races
 3. **Nav prefetch disabled on `/profile`** — prevents prefetch-related hangs
 4. **BottomNav FAB fix** — Post Ad button uses `relative` positioning (not `absolute`) so it doesn't block clicks
-5. **Numeric JSONB attributes** — may need SQL cast for range filters (see comment in `utils.ts`)
-6. **Admin refresh** — uses `router.refresh()` + `window.location.reload()` after status updates
+5. **Mobile search in navbar** — second row below logo on mobile; syncs with URL `q` param
+6. **CategoryBar → search** — home category picks navigate to `/search` instead of client-side filtering
+7. **Numeric JSONB attributes** — may need SQL cast for range filters (see comment in `utils.ts`)
+8. **Admin refresh** — uses `router.refresh()` + `window.location.reload()` after status updates
 
 ---
 
@@ -151,6 +169,8 @@ No email verification gate. No OAuth.
 
 | Commit | Summary |
 |--------|---------|
+| `499e62e` | Mobile search bar + home category bar links to search |
+| `90e4ea1` | PROJECT.md + Cursor rule for AI context |
 | `e9aa6f3` | Profile page + nav links + webpack dev |
 | `81fb339` | Password reset flow |
 | `3398d84` | Re-approval on ad edit |
@@ -170,20 +190,22 @@ No email verification gate. No OAuth.
 - Admin dashboard with role hierarchy
 - Mobile bottom nav + responsive layout
 - Seller phone on ads (call/WhatsApp links)
+- Mobile search bar in navbar
+- Home category bar deep-links to `/search`
+- PROJECT.md + Cursor rule for session continuity
 
 ---
 
 ## Pending / Known Gaps
 
-- [x] Mobile search bar (navbar search row on mobile)
 - [ ] Wallet/balance feature (user chose profile only for now)
 - [ ] Migrate old rent ads with duplicate slugs in Supabase (manual SQL)
 - [ ] Dead code cleanup: `src/data/ads.ts`, unused `vehicleService.ts`, unused `react-range` dep
-- [ ] Add `logo.png` to `public/`
+- [x] Logo asset (`public/logo.png`)
 - [ ] Supabase RLS policies / migrations documented in repo
 - [ ] Email verification, OAuth
-- [x] Home CategoryBar deep-links to `/search` with category filters
 - [ ] `toggle` attribute type defined but not rendered in `DynamicAttributes`
+- [ ] Search page mobile filter UX (sidebar is desktop-oriented)
 - [ ] README still default create-next-app boilerplate
 
 ---

@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Compass, Heart, Shield, Crown, LayoutGrid, PlusCircle, User } from "lucide-react";
 
@@ -75,13 +74,10 @@ function NavbarContent() {
         
         {/* LOGO */}
         <Link href="/" className="flex items-center hover:opacity-90 transition-opacity shrink-0">
-          <Image 
-            src="/logo.png" 
+          <img
+            src="/logo.png"
             alt="Yaddii Logo"
-            width={85}   
-            height={34}   
-            priority 
-            className="object-contain max-h-10 md:max-h-14 w-auto" 
+            className="object-contain max-h-10 md:max-h-12 w-auto"
           />
         </Link>
 
