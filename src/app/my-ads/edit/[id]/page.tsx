@@ -34,6 +34,7 @@ export default function EditAdPage({ params }: EditAdProps) {
   const [makes, setMakes] = useState<{ id: number; name: string }[]>([]);
   const [loadingMakes, setLoadingMakes] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [adStatus, setAdStatus] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -70,6 +71,7 @@ export default function EditAdPage({ params }: EditAdProps) {
         seller_phone: data.seller_phone || "",
       });
       setExistingImages(data.images || []);
+      setAdStatus(data.status);
       setLoading(false);
     }
     init();
@@ -103,12 +105,17 @@ export default function EditAdPage({ params }: EditAdProps) {
           attributes: formData.attributes,
           seller_phone: formData.seller_phone,
           images: [...existingImages, ...uploadedUrls],
+          status: "pending",
         })
         .eq("id", id)
         .eq("user_id", userId);
 
       if (error) throw error;
-      alert("Updated successfully! 🎉");
+      alert(
+        adStatus === "active"
+          ? "Changes saved. Your ad is pending admin approval before going live again."
+          : "Changes saved. Your ad is awaiting admin approval."
+      );
       router.push("/my-ads");
     } catch (err: any) {
       alert("Update failed: " + err.message);
@@ -121,7 +128,12 @@ export default function EditAdPage({ params }: EditAdProps) {
 
   return (
     <div className="max-w-2xl mx-auto my-10 p-8 bg-white rounded-2xl border shadow-sm">
-      <h1 className="text-3xl font-bold mb-8">Edit Listing</h1>
+      <h1 className="text-3xl font-bold mb-4">Edit Listing</h1>
+      {adStatus === "active" && (
+        <p className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Saving changes will remove this ad from the marketplace until an admin approves it again.
+        </p>
+      )}
       <form onSubmit={handleUpdate} className="space-y-6">
         
         {/* Title */}
