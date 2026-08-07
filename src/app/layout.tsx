@@ -47,7 +47,7 @@ export default function RootLayout({
           Don't worry about the home page—we will adjust its padding in the step below so 
           it doesn't look double-spaced.
         */}
-        <div className="pt-[50px] md:pt-[60px] pb-20 md:pb-0 min-h-screen">
+        <div className="pt-[102px] md:pt-[60px] pb-20 md:pb-0 min-h-screen">
           {children}
         </div>
         {/* Fixed Mobile Bottom Navigation */}

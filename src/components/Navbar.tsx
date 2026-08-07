@@ -70,8 +70,8 @@ function NavbarContent() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 border-b border-gray-100 bg-white z-50 px-3 md:px-4 h-14 md:h-16 w-full m-0 flex items-center">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 md:gap-4">
+    <nav className="fixed top-0 left-0 right-0 border-b border-gray-100 bg-white z-50 w-full m-0">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 md:gap-4 px-3 md:px-4 h-14 md:h-16">
         
         {/* LOGO */}
         <Link href="/" className="flex items-center hover:opacity-90 transition-opacity shrink-0">
@@ -85,7 +85,7 @@ function NavbarContent() {
           />
         </Link>
 
-        {/* SEARCH BAR */}
+        {/* DESKTOP SEARCH BAR */}
         <form onSubmit={handleSearchSubmit} className="flex-1 max-w-xs relative items-center hidden md:flex">
           <input
             type="text"
@@ -184,6 +184,22 @@ function NavbarContent() {
           )}
         </div>
       </div>
+
+      {/* MOBILE SEARCH BAR */}
+      <form onSubmit={handleSearchSubmit} className="md:hidden px-3 pb-2.5 border-t border-gray-50">
+        <div className="relative">
+          <input
+            type="search"
+            placeholder="Search ads..."
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            className="w-full bg-gray-50 text-gray-700 pl-4 pr-10 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#FF6321] text-sm transition"
+          />
+          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#FF6321]">
+            <Search size={18} />
+          </button>
+        </div>
+      </form>
     </nav>
   );
 }

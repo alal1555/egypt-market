@@ -37,7 +37,7 @@ export default function CategoryBar({ onSelect }: { onSelect: (main: string, sub
   };
 
   return (
-    <div className="fixed top-[56px] md:top-[64px] left-0 right-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+    <div className="fixed top-[102px] md:top-[64px] left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm">
       <div className="overflow-x-auto scrollbar-hide">
         <div className="flex items-center justify-start md:justify-center gap-6 px-4 py-3 min-w-max">
           {CATEGORY_CONFIG.map((cat) => {

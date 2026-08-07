@@ -175,14 +175,14 @@ No email verification gate. No OAuth.
 
 ## Pending / Known Gaps
 
-- [ ] Mobile search bar (desktop only in Navbar today)
+- [x] Mobile search bar (navbar search row on mobile)
 - [ ] Wallet/balance feature (user chose profile only for now)
 - [ ] Migrate old rent ads with duplicate slugs in Supabase (manual SQL)
 - [ ] Dead code cleanup: `src/data/ads.ts`, unused `vehicleService.ts`, unused `react-range` dep
 - [ ] Add `logo.png` to `public/`
 - [ ] Supabase RLS policies / migrations documented in repo
 - [ ] Email verification, OAuth
-- [ ] Home CategoryBar doesn't deep-link to `/search`
+- [x] Home CategoryBar deep-links to `/search` with category filters
 - [ ] `toggle` attribute type defined but not rendered in `DynamicAttributes`
 - [ ] README still default create-next-app boilerplate
 

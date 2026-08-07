@@ -1,11 +1,10 @@
 "use client";
 
-import { Suspense, useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
 import CategoryBar from "@/components/CategoryBar";
-import { CATEGORY_CONFIG } from "@/constants/categoryConfig";
 import { extractSpecs } from "@/lib/utils";
 
 interface Ad {
@@ -15,8 +14,7 @@ interface Ad {
 
 function HomeContent() {
   const [ads, setAds] = useState<Ad[]>([]);
-  const [activePath, setActivePath] = useState<{ main: string; sub: string } | null>(null);
-  const searchParams = useSearchParams();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
@@ -37,36 +35,14 @@ function HomeContent() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    setActivePath(null);
-  }, [searchParams]);
-
-  const filteredAds = useMemo(() => {
-    if (!activePath) return ads;
-    return ads.filter((ad) => ad.category_slug === activePath.sub);
-  }, [ads, activePath]);
-
-  const getBreadcrumb = () => {
-    if (!activePath) return null;
-    const mainCat = CATEGORY_CONFIG.find((c) => c.slug === activePath.main);
-    const subCat = mainCat?.subs.find((s) => s.slug === activePath.sub);
-    return `${mainCat?.name || ""} / ${subCat?.name || ""}`;
-  };
-
   return (
-    <div className="mt-16 pt-6 md:pt-5 w-full min-h-screen">
-      <CategoryBar onSelect={(main, sub) => setActivePath({ main, sub })} />
+    <div className="mt-[60px] pt-6 md:mt-16 md:pt-5 w-full min-h-screen">
+      <CategoryBar onSelect={(main, sub) => router.push(`/search?main_cat=${main}&sub_cat=${sub}`)} />
 
       <section className="bg-white px-4 py-4 border-b border-gray-100 text-center">
         <h2 className="text-3xl font-black text-gray-900">
           Find everything in <span className="text-[#FF6321]">Egypt</span>
         </h2>
-
-        {activePath && (
-          <p className="mt-3 text-sm font-medium text-gray-500">
-            Viewing: <span className="text-[#FF6321] font-bold">{getBreadcrumb()}</span>
-          </p>
-        )}
       </section>
 
       <main className="mx-auto max-w-[1400px] w-full px-3 py-8 min-h-screen">
@@ -74,7 +50,7 @@ function HomeContent() {
           <div className="text-center py-20 text-gray-400">Loading...</div>
         ) : (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6 items-stretch">
-            {filteredAds.map((ad) => (
+            {ads.map((ad) => (
               <AdCard
                 key={ad.id}
                 id={ad.id}
@@ -92,7 +68,7 @@ function HomeContent() {
           </div>
         )}
 
-        {!loading && filteredAds.length === 0 && (
+        {!loading && ads.length === 0 && (
           <div className="text-center py-16 text-gray-500">No ads found in this category.</div>
         )}
       </main>
