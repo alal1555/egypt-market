@@ -56,7 +56,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 src/
 ├── app/              # Pages (App Router)
-├── components/       # Navbar, BottomNav, AdCard, CategoryBar, DynamicAttributes
+├── components/       # Navbar, BottomNav, AdCard, CategoryBar, DynamicAttributes, SearchFilters
 ├── constants/        # categoryConfig.ts — category/attribute schema
 ├── lib/              # supabase.ts, utils.ts
 .cursor/rules/        # yaddii-marketplace.mdc — always-on AI context rule
@@ -191,6 +191,7 @@ No email verification gate. No OAuth.
 - Seller phone on ads (call/WhatsApp links)
 - Mobile search bar in navbar
 - Home category bar deep-links to `/search`
+- Search page mobile filters (bottom sheet)
 - PROJECT.md + Cursor rule for session continuity
 
 ---
@@ -204,7 +205,7 @@ No email verification gate. No OAuth.
 - [ ] Supabase RLS policies / migrations documented in repo
 - [ ] Email verification, OAuth
 - [ ] `toggle` attribute type defined but not rendered in `DynamicAttributes`
-- [ ] Search page mobile filter UX (sidebar is desktop-oriented)
+- [x] Search page mobile filter UX (bottom sheet panel)
 - [ ] README still default create-next-app boilerplate
 
 ---

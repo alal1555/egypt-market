@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, Suspense, useMemo } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
-import { SlidersHorizontal } from "lucide-react";
+import SearchFilters from "@/components/SearchFilters";
+import { SlidersHorizontal, X } from "lucide-react";
 import { CATEGORY_CONFIG, getAttributesBySlug } from "@/constants/categoryConfig";
 import { extractSpecs } from "@/lib/utils";
 
@@ -20,42 +21,59 @@ function SearchResults() {
   const query = searchParams.get("q") || "";
   const mainCatFilter = searchParams.get("main_cat") || "";
   const subCatFilter = searchParams.get("sub_cat") || "";
-  
+
   const [ads, setAds] = useState<Ad[]>([]);
   const [allMakes, setAllMakes] = useState<{ id: number; name: string }[]>([]);
   const [allModels, setAllModels] = useState<{ id: number; name: string; make_id: number }[]>([]);
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const subCategoryAttributes = useMemo(() => getAttributesBySlug(subCatFilter), [subCatFilter]);
-  const selectedMainCategoryObj = useMemo(() => CATEGORY_CONFIG.find(c => c.slug === mainCatFilter), [mainCatFilter]);
+  const selectedMainCategoryObj = useMemo(() => CATEGORY_CONFIG.find((c) => c.slug === mainCatFilter), [mainCatFilter]);
 
   useEffect(() => {
     async function fetchMetadata() {
       const [makesRes, modelsRes] = await Promise.all([
         supabase.from("makes").select("id, name").order("name"),
-        supabase.from("models").select("id, name, make_id")
+        supabase.from("models").select("id, name, make_id"),
       ]);
       if (makesRes.data) {
         setAllMakes(makesRes.data);
-        setMakesMap(Object.fromEntries(makesRes.data.map(m => [m.id, m.name])));
+        setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
       }
       if (modelsRes.data) {
         setAllModels(modelsRes.data);
-        setModelsMap(Object.fromEntries(modelsRes.data.map(m => [m.id, m.name])));
+        setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
       }
     }
     fetchMetadata();
   }, []);
 
+  useEffect(() => {
+    document.body.style.overflow = mobileFiltersOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileFiltersOpen]);
+
   const activeAttrs = useMemo(() => {
     const filters: Record<string, string[]> = {};
-    subCategoryAttributes.forEach(field => {
-        const val = searchParams.get(field.key);
-        if (val) filters[field.key] = val.split(",");
+    subCategoryAttributes.forEach((field) => {
+      const val = searchParams.get(field.key);
+      if (val) filters[field.key] = val.split(",");
     });
     return filters;
   }, [searchParams, subCategoryAttributes]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (mainCatFilter) count++;
+    if (subCatFilter) count++;
+    if (query) count++;
+    count += Object.keys(activeAttrs).length;
+    return count;
+  }, [mainCatFilter, subCatFilter, query, activeAttrs]);
 
   const updateURL = (updatedParams: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -90,7 +108,7 @@ function SearchResults() {
           q = q.in(`attributes->>${key}`, values);
         }
       });
-      
+
       const { data, error } = await q.order("created_at", { ascending: false });
       if (error) console.error("Search Error:", error);
       setAds(data || []);
@@ -98,115 +116,151 @@ function SearchResults() {
     executeSearch();
   }, [query, subCatFilter, activeAttrs, subCategoryAttributes]);
 
+  const filterProps = {
+    mainCatFilter,
+    subCatFilter,
+    selectedMainCategoryObj,
+    subCategoryAttributes,
+    activeAttrs,
+    allMakes,
+    allModels,
+    updateURL,
+  };
+
+  const hasActiveFilters = activeFilterCount > 0;
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-10">
-      <div className="bg-white p-6 rounded-2xl border mb-10 shadow-sm">
-        <div className="grid grid-cols-2 gap-4">
-          <select value={mainCatFilter} onChange={(e) => updateURL({ main_cat: e.target.value, sub_cat: null, q: null })} className="p-3 bg-gray-50 rounded-xl border">
-            <option value="">All Categories</option>
-            {CATEGORY_CONFIG.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
-          </select>
-          <select value={subCatFilter} disabled={!mainCatFilter} onChange={(e) => updateURL({ sub_cat: e.target.value, q: null })} className="p-3 bg-gray-50 rounded-xl border">
-            <option value="">All Sub-Categories</option>
-            {selectedMainCategoryObj?.subs.map(s => <option key={s.slug} value={s.slug}>{s.name}</option>)}
-          </select>
-        </div>
+    <div className="w-full max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-10">
+      {/* Desktop category bar */}
+      <div className="hidden md:block bg-white p-6 rounded-2xl border mb-10 shadow-sm">
+        <SearchFilters {...filterProps} showCategories showAttributes={false} />
       </div>
 
       <div className="flex gap-8 items-start">
-        <aside className="w-[260px] shrink-0 bg-white p-6 rounded-2xl border shadow-sm h-fit sticky top-24">
-          <h3 className="font-bold mb-4 flex items-center gap-2 text-gray-800"><SlidersHorizontal size={16} /> Filters</h3>
-          {subCategoryAttributes.map(field => (
-            <div key={field.key} className="mb-6">
-              <p className="text-xs font-black uppercase text-gray-400 mb-2">{field.label}</p>
-              
-              {field.type === 'range' ? (
-                <div className="flex gap-2 items-center">
-                    <input type="number" placeholder="Min" className="w-full p-2 border rounded-lg text-sm"
-                        value={activeAttrs[field.key]?.[0]?.split("-")[0] || ""}
-                        onChange={(e) => {
-                            const [_, max] = (activeAttrs[field.key]?.[0] || "-").split("-");
-                            updateURL({ [field.key]: `${e.target.value}-${max || ""}` });
-                        }}
-                    />
-                    <span className="text-gray-400">—</span>
-                    <input type="number" placeholder="Max" className="w-full p-2 border rounded-lg text-sm"
-                        value={activeAttrs[field.key]?.[0]?.split("-")[1] || ""}
-                        onChange={(e) => {
-                            const [min] = (activeAttrs[field.key]?.[0] || "-").split("-");
-                            updateURL({ [field.key]: `${min || ""}-${e.target.value}` });
-                        }}
-                    />
-                </div>
-              ) : null}
-
-              {field.key === 'make_id' && (
-                <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
-                  {allMakes.map(m => (
-                    <label key={m.id} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-[#FF6321]">
-                      <input type="checkbox" checked={activeAttrs.make_id?.includes(String(m.id)) || false} 
-                        onChange={() => updateURL({ make_id: activeAttrs.make_id?.includes(String(m.id)) ? null : String(m.id), model_id: null })} />
-                      {m.name}
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {field.key === 'model_id' && activeAttrs.make_id && (
-                <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
-                  {allModels.filter(m => m.make_id === parseInt(activeAttrs.make_id[0])).map(m => (
-                    <label key={m.id} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-[#FF6321]">
-                      <input type="checkbox" checked={activeAttrs.model_id?.includes(String(m.id)) || false} 
-                        onChange={() => updateURL({ model_id: activeAttrs.model_id?.includes(String(m.id)) ? null : String(m.id) })} />
-                      {m.name}
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {field.type === 'select' && field.key !== 'make_id' && field.key !== 'model_id' && (
-                 <div className="space-y-1">
-                    {field.options?.map(opt => (
-                      <label key={opt} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-[#FF6321]">
-                        <input type="checkbox" checked={!!activeAttrs[field.key]?.includes(opt) || false} 
-                          onChange={() => {
-                            const current = activeAttrs[field.key] || [];
-                            const next = current.includes(opt) ? current.filter(v => v !== opt) : [...current, opt];
-                            updateURL({ [field.key]: next.length > 0 ? next.join(",") : null });
-                          }} />
-                        {opt}
-                      </label>
-                    ))}
-                 </div>
-              )}
-            </div>
-          ))}
+        {/* Desktop sidebar filters */}
+        <aside className="hidden md:block w-[260px] shrink-0 bg-white p-6 rounded-2xl border shadow-sm h-fit sticky top-24">
+          <SearchFilters {...filterProps} showCategories={false} showAttributes />
         </aside>
 
-        <main className="flex-1">
-          <div className="mb-6 flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900">{ads.length} Ads found</h2>
-            {(query || mainCatFilter || subCatFilter || Object.keys(activeAttrs).length > 0) && (
-              <button onClick={() => router.push('/search')} className="text-sm text-gray-500 hover:text-[#FF6321] underline">Clear all</button>
+        <main className="flex-1 min-w-0">
+          <div className="mb-4 md:mb-6 flex justify-between items-center gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(true)}
+                className="md:hidden flex items-center gap-2 shrink-0 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 hover:border-[#FF6321] hover:text-[#FF6321] transition-colors"
+              >
+                <SlidersHorizontal size={16} />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-[#FF6321] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+              <h2 className="text-base md:text-xl font-bold text-gray-900 truncate">
+                {ads.length} Ads found
+              </h2>
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={() => router.push("/search")}
+                className="text-sm text-gray-500 hover:text-[#FF6321] underline shrink-0"
+              >
+                Clear all
+              </button>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ads.map(ad => (
-                <AdCard 
-                  key={ad.id} id={ad.id} title={ad.title} price={String(ad.price)}
-                  location={ad.location} category={ad.category_slug} imageUrl={ad.images?.[0]} 
-                  specs={extractSpecs(ad.attributes)} makeName={makesMap[ad.attributes?.make_id]} 
-                  modelName={modelsMap[ad.attributes?.model_id]} postedDate={new Date(ad.created_at).toLocaleDateString()}
-                />
+          {query && (
+            <p className="mb-4 text-sm text-gray-500 md:hidden">
+              Results for &ldquo;<span className="font-semibold text-gray-700">{query}</span>&rdquo;
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            {ads.map((ad) => (
+              <AdCard
+                key={ad.id}
+                id={ad.id}
+                title={ad.title}
+                price={String(ad.price)}
+                location={ad.location}
+                category={ad.category_slug}
+                imageUrl={ad.images?.[0]}
+                specs={extractSpecs(ad.attributes)}
+                makeName={makesMap[ad.attributes?.make_id]}
+                modelName={modelsMap[ad.attributes?.model_id]}
+                postedDate={new Date(ad.created_at).toLocaleDateString()}
+              />
             ))}
           </div>
+
+          {ads.length === 0 && (
+            <div className="text-center py-16 text-gray-500">
+              No ads match your filters.
+              {hasActiveFilters && (
+                <button
+                  onClick={() => router.push("/search")}
+                  className="block mx-auto mt-3 text-sm text-[#FF6321] font-bold underline"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
         </main>
       </div>
+
+      {/* Mobile filter sheet */}
+      {mobileFiltersOpen && (
+        <div className="md:hidden fixed inset-0 z-[60]">
+          <button
+            type="button"
+            aria-label="Close filters"
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 shrink-0">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                <SlidersHorizontal size={18} />
+                Filters
+              </h3>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-4 py-4 flex-1">
+              <SearchFilters {...filterProps} showCategories />
+            </div>
+
+            <div className="shrink-0 p-4 border-t border-gray-100 pb-6">
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="w-full py-3 rounded-xl bg-[#FF6321] text-white font-bold hover:bg-[#e85a1e] transition-colors"
+              >
+                Show {ads.length} results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function SearchPage() {
-  return <Suspense fallback={<div className="text-center py-20">Loading...</div>}><SearchResults /></Suspense>;
+  return (
+    <Suspense fallback={<div className="text-center py-20">Loading...</div>}>
+      <SearchResults />
+    </Suspense>
+  );
 }
