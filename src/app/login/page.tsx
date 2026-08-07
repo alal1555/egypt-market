@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -111,7 +112,14 @@ function LoginForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-bold text-gray-700">Password</label>
+              {!isSignUp && (
+                <Link href="/forgot-password" className="text-xs font-bold text-[#FF6321] hover:underline">
+                  Forgot password?
+                </Link>
+              )}
+            </div>
             <input
               type="password"
               className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#FF6321]"

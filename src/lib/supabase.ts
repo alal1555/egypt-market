@@ -4,5 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// This is the main tool we will use to talk to your database
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    // Handle recovery tokens manually on /auth/callback so layout doesn't consume the hash first.
+    detectSessionInUrl: false,
+    persistSession: true,
+    flowType: "implicit",
+  },
+});
