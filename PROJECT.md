@@ -58,8 +58,7 @@ src/
 ├── app/              # Pages (App Router)
 ├── components/       # Navbar, BottomNav, AdCard, CategoryBar, DynamicAttributes
 ├── constants/        # categoryConfig.ts — category/attribute schema
-├── lib/              # supabase.ts, utils.ts, vehicleService.ts
-└── data/             # ads.ts — unused mock data (dead code)
+├── lib/              # supabase.ts, utils.ts
 .cursor/rules/        # yaddii-marketplace.mdc — always-on AI context rule
 public/               # Static assets (logo.png)
 ```
@@ -200,7 +199,7 @@ No email verification gate. No OAuth.
 
 - [ ] Wallet/balance feature (user chose profile only for now)
 - [ ] Migrate old rent ads with duplicate slugs in Supabase (manual SQL)
-- [ ] Dead code cleanup: `src/data/ads.ts`, unused `vehicleService.ts`, unused `react-range` dep
+- [x] Dead code cleanup (`src/data/ads.ts`, `vehicleService.ts`, `react-range`)
 - [x] Logo asset (`public/logo.png`)
 - [ ] Supabase RLS policies / migrations documented in repo
 - [ ] Email verification, OAuth
