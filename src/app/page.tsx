@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
@@ -9,13 +9,13 @@ import { CATEGORY_CONFIG } from "@/constants/categoryConfig";
 import { extractSpecs } from "@/lib/utils";
 
 interface Ad {
-  id: string; title: string; price: number; location: string; category_slug: string; 
+  id: string; title: string; price: number; location: string; category_slug: string;
   images: string[]; status: string; created_at: string; attributes?: any;
 }
 
-export default function Home() {
+function HomeContent() {
   const [ads, setAds] = useState<Ad[]>([]);
-  const [activePath, setActivePath] = useState<{main: string, sub: string} | null>(null);
+  const [activePath, setActivePath] = useState<{ main: string; sub: string } | null>(null);
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
@@ -25,33 +25,32 @@ export default function Home() {
     async function fetchData() {
       setLoading(true);
       const [adsRes, makesRes, modelsRes] = await Promise.all([
-        supabase.from('ads').select('*').eq('status', 'active').order('created_at', { ascending: false }),
-        supabase.from('makes').select('id, name'),
-        supabase.from('models').select('id, name')
+        supabase.from("ads").select("*").eq("status", "active").order("created_at", { ascending: false }),
+        supabase.from("makes").select("id, name"),
+        supabase.from("models").select("id, name"),
       ]);
       if (adsRes.data) setAds(adsRes.data);
-      if (makesRes.data) setMakesMap(Object.fromEntries(makesRes.data.map(m => [m.id, m.name])));
-      if (modelsRes.data) setModelsMap(Object.fromEntries(modelsRes.data.map(m => [m.id, m.name])));
+      if (makesRes.data) setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
+      if (modelsRes.data) setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
       setLoading(false);
     }
     fetchData();
   }, []);
 
-  // Reset filter when navigation occurs (logo click/home link)
   useEffect(() => {
     setActivePath(null);
   }, [searchParams]);
 
   const filteredAds = useMemo(() => {
     if (!activePath) return ads;
-    return ads.filter(ad => ad.category_slug === activePath.sub);
+    return ads.filter((ad) => ad.category_slug === activePath.sub);
   }, [ads, activePath]);
 
   const getBreadcrumb = () => {
     if (!activePath) return null;
-    const mainCat = CATEGORY_CONFIG.find(c => c.slug === activePath.main);
-    const subCat = mainCat?.subs.find(s => s.slug === activePath.sub);
-    return `${mainCat?.name || ''} / ${subCat?.name || ''}`;
+    const mainCat = CATEGORY_CONFIG.find((c) => c.slug === activePath.main);
+    const subCat = mainCat?.subs.find((s) => s.slug === activePath.sub);
+    return `${mainCat?.name || ""} / ${subCat?.name || ""}`;
   };
 
   return (
@@ -62,7 +61,7 @@ export default function Home() {
         <h2 className="text-3xl font-black text-gray-900">
           Find everything in <span className="text-[#FF6321]">Egypt</span>
         </h2>
-        
+
         {activePath && (
           <p className="mt-3 text-sm font-medium text-gray-500">
             Viewing: <span className="text-[#FF6321] font-bold">{getBreadcrumb()}</span>
@@ -74,17 +73,16 @@ export default function Home() {
         {loading ? (
           <div className="text-center py-20 text-gray-400">Loading...</div>
         ) : (
-          /* Added 'items-stretch' to force all AdCard components to match height */
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6 items-stretch">
             {filteredAds.map((ad) => (
-              <AdCard 
-                key={ad.id} 
-                id={ad.id} 
-                title={ad.title} 
-                price={String(ad.price)} 
+              <AdCard
+                key={ad.id}
+                id={ad.id}
+                title={ad.title}
+                price={String(ad.price)}
                 location={ad.location}
-                category={ad.category_slug} 
-                imageUrl={ad.images?.[0]} 
+                category={ad.category_slug}
+                imageUrl={ad.images?.[0]}
                 specs={ad.attributes ? extractSpecs(ad.attributes) : {}}
                 postedDate={new Date(ad.created_at).toLocaleDateString()}
                 makeName={ad.attributes?.make_id ? makesMap[ad.attributes.make_id] : undefined}
@@ -93,11 +91,19 @@ export default function Home() {
             ))}
           </div>
         )}
-        
+
         {!loading && filteredAds.length === 0 && (
           <div className="text-center py-16 text-gray-500">No ads found in this category.</div>
         )}
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="text-center py-20 text-gray-400">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

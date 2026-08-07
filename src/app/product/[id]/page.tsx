@@ -25,7 +25,7 @@ export default function ProductPage() {
       
       // Fetch Ad + References in parallel
       const [adRes, makesRes, modelsRes] = await Promise.all([
-        supabase.from("ads").select("*").eq("id", params.id).single(),
+        supabase.from("ads").select("*").eq("id", params.id).eq("status", "active").single(),
         supabase.from("makes").select("id, name"),
         supabase.from("models").select("id, name")
       ]);
@@ -41,7 +41,8 @@ export default function ProductPage() {
         const { data: relatedData } = await supabase
           .from("ads")
           .select("*")
-          .eq("category_slug", adRes.data.category_slug) 
+          .eq("category_slug", adRes.data.category_slug)
+          .eq("status", "active")
           .not("id", "eq", adRes.data.id)
           .limit(4);
         
@@ -66,7 +67,7 @@ export default function ProductPage() {
   const phoneLink = ad.seller_phone ? formatPhoneForLink(ad.seller_phone) : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           
