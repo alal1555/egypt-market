@@ -144,7 +144,7 @@ function NavbarContent() {
               <Link href="/login" className="text-sm font-bold text-gray-600 hover:text-[#FF6321] px-2 py-1">
                 Login
               </Link>
-              <Link href="/login" className="rounded-xl bg-[#FF6321] px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#e85a1e] transition-all">
+              <Link href="/signup" className="rounded-xl bg-[#FF6321] px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#e85a1e] transition-all">
                 Start Selling
               </Link>
             </div>
