@@ -72,10 +72,10 @@ export const CATEGORY_CONFIG: MainCategory[] = [
           { label: 'Fuel Type', key: 'fuel_type', type: 'select', options: ['Gasoline', 'Diesel', 'Electric', 'Hybrid'] }
         ] 
       },
-      { name: "Buses", slug: "vs_buses", attributes: [{ label: 'Year', key: 'year', type: 'range' }, { label: 'Fuel Type', key: 'fuel_type', type: 'select', options: ['Diesel', 'Gasoline'] }] },
-      { name: "Trucks", slug: "vs_trucks", attributes: [{ label: 'Year', key: 'year', type: 'range' }, { label: 'Capacity (Tons)', key: 'capacity', type: 'number' }] },
-      { name: "Motorcycles & Scooters", slug: "vs_motorcycles", attributes: [{ label: 'Year', key: 'year', type: 'range' }] },
-      { name: "Spare Parts", slug: "vs_parts", attributes: [{ label: 'Part Type', key: 'part_type', type: 'text' }] }
+      { name: "Buses", slug: "vr_buses", attributes: [{ label: 'Year', key: 'year', type: 'range' }, { label: 'Fuel Type', key: 'fuel_type', type: 'select', options: ['Diesel', 'Gasoline'] }] },
+      { name: "Trucks", slug: "vr_trucks", attributes: [{ label: 'Year', key: 'year', type: 'range' }, { label: 'Capacity (Tons)', key: 'capacity', type: 'number' }] },
+      { name: "Motorcycles & Scooters", slug: "vr_motorcycles", attributes: [{ label: 'Year', key: 'year', type: 'range' }] },
+      { name: "Spare Parts", slug: "vr_parts", attributes: [{ label: 'Part Type', key: 'part_type', type: 'text' }] }
     ]
   },
   {

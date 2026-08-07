@@ -1,3 +1,11 @@
+/** Normalize phone for tel: / wa.me links (Egypt: 20 + number). */
+export function formatPhoneForLink(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("20")) return digits;
+  if (digits.startsWith("0")) return `20${digits.slice(1)}`;
+  return digits.length === 10 ? `20${digits}` : digits;
+}
+
 export const extractSpecs = (attributes: any) => {
   if (!attributes || typeof attributes !== 'object') return {};
 

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Phone, MessageCircle, MapPin } from "lucide-react";
 import AdCard from "@/components/AdCard";
-import { extractSpecs } from "@/lib/utils";
+import { extractSpecs, formatPhoneForLink } from "@/lib/utils";
 
 export default function ProductPage() {
   const params = useParams();
@@ -63,6 +63,8 @@ export default function ProductPage() {
     return { label: key.replace('_', ' '), val: String(value) };
   };
 
+  const phoneLink = ad.seller_phone ? formatPhoneForLink(ad.seller_phone) : null;
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="mx-auto max-w-7xl px-4 py-8">
@@ -113,12 +115,18 @@ export default function ProductPage() {
               </div>
 
               <div className="space-y-3">
-                <a href={`tel:${ad.seller_phone}`} className="w-full flex items-center justify-center gap-3 bg-[#FF6321] py-4 rounded-2xl font-bold text-white hover:bg-[#e85a1e]">
-                  <Phone size={20} /> Call Seller
-                </a>
-                <a href={`https://wa.me/${ad.seller_phone}`} target="_blank" className="w-full flex items-center justify-center gap-3 border-2 border-[#FF6321] py-4 rounded-2xl font-bold text-[#FF6321] hover:bg-orange-50">
-                  <MessageCircle size={20} /> WhatsApp
-                </a>
+                {phoneLink ? (
+                  <>
+                    <a href={`tel:+${phoneLink}`} className="w-full flex items-center justify-center gap-3 bg-[#FF6321] py-4 rounded-2xl font-bold text-white hover:bg-[#e85a1e]">
+                      <Phone size={20} /> Call Seller
+                    </a>
+                    <a href={`https://wa.me/${phoneLink}`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-3 border-2 border-[#FF6321] py-4 rounded-2xl font-bold text-[#FF6321] hover:bg-orange-50">
+                      <MessageCircle size={20} /> WhatsApp
+                    </a>
+                  </>
+                ) : (
+                  <p className="text-center text-sm text-gray-500 py-4">Contact phone not available for this listing.</p>
+                )}
               </div>
             </div>
           </div>

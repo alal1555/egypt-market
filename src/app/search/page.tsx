@@ -72,20 +72,22 @@ function SearchResults() {
       if (subCatFilter) q = q.eq("category_slug", subCatFilter);
       if (query) q = q.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
 
-      const numericFields = ['mileage', 'area', 'year', 'price', 'bedrooms'];
-
       Object.entries(activeAttrs).forEach(([key, values]) => {
-        if (values.length > 0 && values[0].includes("-")) {
+        if (values.length === 0) return;
+
+        const field = subCategoryAttributes.find((f) => f.key === key);
+        const isRangeValue = values.length === 1 && values[0].includes("-");
+
+        if (field?.type === "range" || isRangeValue) {
           const [minStr, maxStr] = values[0].split("-");
-          
-          if (numericFields.includes(key)) {
-            // Because your data is now stored as integers, 
-            // these standard filters will work perfectly!
-            if (minStr !== "" && !isNaN(Number(minStr))) q = q.gte(`attributes->${key}`, Number(minStr));
-            if (maxStr !== "" && !isNaN(Number(maxStr))) q = q.lte(`attributes->${key}`, Number(maxStr));
-          } else {
-            q = q.in(`attributes->>${key}`, values);
-          }
+          if (minStr !== "" && !isNaN(Number(minStr))) q = q.gte(`attributes->${key}`, Number(minStr));
+          if (maxStr !== "" && !isNaN(Number(maxStr))) q = q.lte(`attributes->${key}`, Number(maxStr));
+        } else if (field?.type === "select" || key === "make_id" || key === "model_id") {
+          q = q.in(`attributes->>${key}`, values);
+        } else if (values.length === 1) {
+          q = q.eq(`attributes->>${key}`, values[0]);
+        } else {
+          q = q.in(`attributes->>${key}`, values);
         }
       });
       
@@ -94,7 +96,7 @@ function SearchResults() {
       setAds(data || []);
     }
     executeSearch();
-  }, [query, subCatFilter, activeAttrs]);
+  }, [query, subCatFilter, activeAttrs, subCategoryAttributes]);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-10">

@@ -20,7 +20,8 @@ export default function EditAdPage({ params }: EditAdProps) {
     location: "",
     description: "",
     category_slug: "",
-    attributes: {}
+    attributes: {},
+    seller_phone: "",
   });
 
   // Image States
@@ -65,7 +66,8 @@ export default function EditAdPage({ params }: EditAdProps) {
         location: data.location,
         description: data.description || "",
         category_slug: data.category_slug,
-        attributes: data.attributes || {}
+        attributes: data.attributes || {},
+        seller_phone: data.seller_phone || "",
       });
       setExistingImages(data.images || []);
       setLoading(false);
@@ -99,6 +101,7 @@ export default function EditAdPage({ params }: EditAdProps) {
           location: formData.location,
           description: formData.description,
           attributes: formData.attributes,
+          seller_phone: formData.seller_phone,
           images: [...existingImages, ...uploadedUrls],
         })
         .eq("id", id)
@@ -132,6 +135,15 @@ export default function EditAdPage({ params }: EditAdProps) {
         
         {/* Description */}
         <textarea className="w-full px-4 py-3 border rounded-xl" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Description" rows={4} />
+
+        <input
+          type="tel"
+          className="w-full px-4 py-3 border rounded-xl"
+          value={formData.seller_phone}
+          onChange={(e) => setFormData({...formData, seller_phone: e.target.value})}
+          placeholder="Contact Phone (01XXXXXXXXX)"
+          required
+        />
         
         {/* Dynamic Attributes */}
         <div className="p-4 bg-gray-50 rounded-xl border">

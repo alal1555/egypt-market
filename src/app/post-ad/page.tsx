@@ -15,6 +15,7 @@ export default function PostAdPage() {
   const [category, setCategory] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [sellerPhone, setSellerPhone] = useState("");
   
   const [makes, setMakes] = useState<{ id: number; name: string }[]>([]);
   const [loadingMakes, setLoadingMakes] = useState(false);
@@ -67,6 +68,7 @@ export default function PostAdPage() {
         category_slug: category,
         attributes: formData.attributes,
         images: uploadedUrls,
+        seller_phone: sellerPhone,
         status: "pending" 
       });
 
@@ -88,7 +90,13 @@ export default function PostAdPage() {
       if (data) setMakes(data);
       setLoadingMakes(false);
     }
+    async function loadUserPhone() {
+      const { data: { user } } = await supabase.auth.getUser();
+      const phone = user?.user_metadata?.phone_number;
+      if (phone) setSellerPhone(phone);
+    }
     loadMakes();
+    loadUserPhone();
   }, []);
 
   return (
@@ -182,6 +190,18 @@ export default function PostAdPage() {
             className="w-full p-4 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
             onChange={(e) => setFormData({...formData, location: e.target.value})}
             required 
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-lg font-semibold text-gray-700">Contact Phone</label>
+          <input
+            type="tel"
+            placeholder="01XXXXXXXXX"
+            value={sellerPhone}
+            onChange={(e) => setSellerPhone(e.target.value)}
+            className="w-full p-4 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+            required
           />
         </div>
 
