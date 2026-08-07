@@ -1,0 +1,42 @@
+---
+description: Yaddii Marketplace project context — read before any work
+alwaysApply: true
+---
+
+# Yaddii Marketplace (egypt-market)
+
+**Read `PROJECT.md` first** for full routes, schema, auth flows, and pending work.
+
+## Quick facts
+
+- Classifieds site for Egypt. Brand color `#FF6321`. Stack: Next.js 16.2.4, React 19, Tailwind 4, Supabase.
+- Repo: github.com/alal1555/egypt-market. Owner: Aly.
+- **Next.js 16 has breaking changes** — check `node_modules/next/dist/docs/` before writing Next.js code.
+
+## Dev
+
+```bash
+npm run dev   # next dev --webpack — do NOT switch back to Turbopack on Windows
+```
+
+Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+If dev crashes: kill duplicate node processes, delete `.next`, restart. Keep ~8 GB free on C:.
+
+## Architecture rules
+
+- **No middleware** — auth checks are client-side per page.
+- **Supabase client:** `src/lib/supabase.ts` (`detectSessionInUrl: false`, `flowType: "implicit"`).
+- **Categories:** `src/constants/categoryConfig.ts` is the single source of truth.
+- **Profile page:** client-only (`ssr: false`); nav links use `prefetch={false}`.
+- **Ad edits** reset status to `pending` (requires admin re-approval).
+- **Password reset:** recovery token handled via `/auth/callback` → `/reset-password` with direct REST call.
+
+## Supabase tables
+
+`ads`, `profiles` (roles: user/admin/super), `favorites`, `makes`, `models`. Storage bucket: `ad-images`.
+
+## When adding features
+
+1. Match existing patterns in surrounding files — client components, Supabase queries inline.
+2. Minimize scope; don't refactor unrelated code.
+3. Update `PROJECT.md` if you add routes, tables, or change key decisions.
