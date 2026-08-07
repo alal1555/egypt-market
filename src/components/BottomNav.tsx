@@ -72,18 +72,18 @@ export default function BottomNav() {
       {/* Post Ad (Centered Action Button) */}
       <Link 
         href="/post-ad" 
-        className="flex flex-col items-center justify-center flex-1 py-1 text-[#FF6321]"
+        className="relative flex flex-col items-center justify-center flex-1 py-1 text-[#FF6321]"
       >
-        <div className="bg-[#FF6321] text-white p-2 rounded-full shadow-sm -translate-y-2 border-4 border-white absolute">
+        <div className="relative -top-3 bg-[#FF6321] text-white p-2 rounded-full shadow-sm border-4 border-white">
           <PlusCircle size={22} strokeWidth={2.5} />
         </div>
-        <span className="text-[10px] font-black mt-7 text-[#FF6321]">Post Ad</span>
+        <span className="text-[10px] font-black mt-1 text-[#FF6321]">Post Ad</span>
       </Link>
 
       {/* My Ads */}
       <Link 
         href="/my-ads" 
-        className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+        className={`relative z-10 flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
           isActive("/my-ads") ? "text-[#FF6321]" : "text-gray-500"
         }`}
       >
@@ -91,29 +91,30 @@ export default function BottomNav() {
         <span className="text-[10px] font-bold mt-0.5">My Ads</span>
       </Link>
 
-      {/* Conditional Admin/Super Link */}
-      {user && (userRole === "admin" || userRole === "super") ? (
+      {user && (userRole === "admin" || userRole === "super") && (
         <Link 
           href="/admin/dashboard" 
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+          className={`relative z-10 flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
             isActive("/admin/dashboard") ? "text-amber-600" : "text-gray-500"
           }`}
         >
           {userRole === "super" ? <Crown size={20} /> : <Shield size={20} />}
           <span className="text-[10px] font-bold mt-0.5">Admin</span>
         </Link>
-      ) : (
-        /* If guest or standard user, display Login/Profile status helper text */
-        <Link 
-          href={user ? "/my-ads" : "/login"} 
-          className="flex flex-col items-center justify-center flex-1 py-1 text-gray-500"
-        >
-          <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-600 uppercase">
-            {user ? user.email?.[0] : "?"}
-          </div>
-          <span className="text-[10px] font-bold mt-0.5">{user ? "Profile" : "Login"}</span>
-        </Link>
       )}
+
+      <Link 
+        href={user ? "/profile" : "/login"}
+        prefetch={false}
+        className={`relative z-10 flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+          isActive("/profile") || isActive("/login") ? "text-[#FF6321]" : "text-gray-500"
+        }`}
+      >
+        <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-600 uppercase">
+          {user ? user.email?.[0] : "?"}
+        </div>
+        <span className="text-[10px] font-bold mt-0.5">{user ? "Profile" : "Login"}</span>
+      </Link>
 
     </div>
   );

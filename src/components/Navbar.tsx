@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Compass, Heart, Shield, Crown, LayoutGrid, PlusCircle } from "lucide-react";
+import { Search, Compass, Heart, Shield, Crown, LayoutGrid, PlusCircle, User } from "lucide-react";
 
 function NavbarContent() {
   const [user, setUser] = useState<any>(null);
@@ -126,6 +126,11 @@ function NavbarContent() {
                 <LayoutGrid size={18} />
                 <span>My Ads</span>
               </Link>
+
+              <Link href="/profile" prefetch={false} className="p-1.5 text-gray-600 hover:text-[#FF6321] font-bold text-sm flex items-center gap-1">
+                <User size={18} />
+                <span>Profile</span>
+              </Link>
           
               <Link href="/post-ad" className="text-sm font-bold text-white bg-[#FF6321] hover:bg-[#e85a1e] transition-colors whitespace-nowrap flex items-center gap-1.5 px-4 py-2 rounded-xl shadow-sm">
                 <PlusCircle size={16} />
@@ -152,14 +157,23 @@ function NavbarContent() {
         </div>
 
         {/* MOBILE AUTH BUTTONS */}
-        <div className="md:hidden flex items-center shrink-0">
+        <div className="md:hidden flex items-center gap-2 shrink-0">
           {user ? (
-            <button 
-              onClick={handleLogout}
-              className="text-xs font-bold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-xl bg-white hover:text-red-500 transition-colors"
-            >
-              Logout
-            </button>
+            <>
+              <Link
+                href="/profile"
+                prefetch={false}
+                className="text-xs font-bold text-gray-600 border border-gray-200 px-3 py-1.5 rounded-xl bg-white hover:text-[#FF6321] transition-colors"
+              >
+                Profile
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className="text-xs font-bold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-xl bg-white hover:text-red-500 transition-colors"
+              >
+                Logout
+              </button>
+            </>
           ) : (
             <Link 
               href="/login"
