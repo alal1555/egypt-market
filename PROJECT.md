@@ -209,7 +209,7 @@ No email verification gate. No OAuth.
 - [ ] Email verification, OAuth
 - [ ] `toggle` attribute type defined but not rendered in `DynamicAttributes`
 - [x] Search page mobile filter UX (bottom sheet panel)
-- [ ] README still default create-next-app boilerplate
+- [x] README with Yaddii setup instructions
 
 ---
 
