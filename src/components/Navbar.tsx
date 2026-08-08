@@ -70,14 +70,14 @@ function NavbarContent() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 border-b border-gray-100 bg-white z-50 w-full m-0">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 md:gap-4 px-3 md:px-4 h-14 md:h-16">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 md:gap-4 px-3 md:px-4 h-14 md:h-16 overflow-hidden">
         
         {/* LOGO */}
-        <Link href="/" className="flex items-center hover:opacity-90 transition-opacity shrink-0">
+        <Link href="/" className="flex items-center hover:opacity-90 transition-opacity shrink-0 h-full py-1">
           <img
-            src="/logo.png"
+            src="/logo-nav.png"
             alt="Yaddii Logo"
-            className="object-contain max-h-10 md:max-h-12 w-auto"
+            className="h-10 md:h-12 w-auto object-contain object-left"
           />
         </Link>
 

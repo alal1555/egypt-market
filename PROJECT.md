@@ -60,7 +60,7 @@ src/
 ├── constants/        # categoryConfig.ts — category/attribute schema
 ├── lib/              # supabase.ts, utils.ts
 .cursor/rules/        # yaddii-marketplace.mdc — always-on AI context rule
-public/               # Static assets (logo.png)
+public/               # Static assets (logo.png full, logo-nav.png navbar)
 ```
 
 No API routes. No Supabase migrations in repo. All auth checks are **client-side** (no middleware).
