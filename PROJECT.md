@@ -59,11 +59,12 @@ src/
 ├── components/       # Navbar, BottomNav, AdCard, CategoryBar, DynamicAttributes, SearchFilters
 ├── constants/        # categoryConfig.ts — category/attribute schema
 ├── lib/              # supabase.ts, utils.ts
+supabase/             # schema.sql, rls.sql, README.md — database docs
 .cursor/rules/        # yaddii-marketplace.mdc — always-on AI context rule
 public/               # Static assets (logo.png full, logo-nav.png navbar)
 ```
 
-No API routes. No Supabase migrations in repo. All auth checks are **client-side** (no middleware).
+No API routes. Schema + RLS in `supabase/`. All auth checks are **client-side** (no middleware).
 
 ---
 
@@ -101,6 +102,8 @@ No API routes. No Supabase migrations in repo. All auth checks are **client-side
 ---
 
 ## Supabase Schema (inferred from code)
+
+Full SQL + RLS: see [`supabase/README.md`](supabase/README.md)
 
 ### `ads`
 `id`, `user_id`, `title`, `price`, `location`, `description`, `category_slug`, `attributes` (JSONB), `images` (text[]), `seller_phone`, `status` (`pending` | `active` | `banned`), `created_at`
@@ -202,7 +205,7 @@ No email verification gate. No OAuth.
 - [ ] Migrate old rent ads with duplicate slugs in Supabase (manual SQL)
 - [x] Dead code cleanup (`src/data/ads.ts`, `vehicleService.ts`, `react-range`)
 - [x] Logo asset (`public/logo.png`)
-- [ ] Supabase RLS policies / migrations documented in repo
+- [x] Supabase RLS policies / migrations documented in repo (`supabase/`)
 - [ ] Email verification, OAuth
 - [ ] `toggle` attribute type defined but not rendered in `DynamicAttributes`
 - [x] Search page mobile filter UX (bottom sheet panel)
