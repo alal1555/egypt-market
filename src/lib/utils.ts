@@ -28,8 +28,20 @@ export const extractSpecs = (attributes: any) => {
       mileage: attributes.mileage,
       condition: attributes.condition,
       transmission: attributes.transmission,
+      fuel_type: attributes.fuel_type,
       make_id: attributes.make_id,
-      model_id: attributes.model_id
+      model_id: attributes.model_id,
+    };
+  }
+
+  if (attributes.bedrooms || attributes.area || attributes.furnished) {
+    return {
+      bedrooms: attributes.bedrooms,
+      bathrooms: attributes.bathrooms,
+      area: attributes.area,
+      furnished: attributes.furnished,
+      finishing: attributes.finishing,
+      rental_period: attributes.rental_period,
     };
   }
 

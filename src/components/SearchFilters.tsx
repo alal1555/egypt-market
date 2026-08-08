@@ -74,7 +74,7 @@ export default function SearchFilters({
         <div key={field.key} className="mb-6">
           <p className="text-xs font-black uppercase text-gray-400 mb-2">{field.label}</p>
 
-          {field.type === "range" ? (
+          {field.type === "range" || field.type === "number" ? (
             <div className="flex gap-2 items-center">
               <input
                 type="number"
@@ -98,6 +98,21 @@ export default function SearchFilters({
                 }}
               />
             </div>
+          ) : null}
+
+          {field.type === "toggle" ? (
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-[#FF6321]">
+              <input
+                type="checkbox"
+                checked={activeAttrs[field.key]?.includes("Yes") || false}
+                onChange={() =>
+                  updateURL({
+                    [field.key]: activeAttrs[field.key]?.includes("Yes") ? null : "Yes",
+                  })
+                }
+              />
+              Yes
+            </label>
           ) : null}
 
           {field.key === "make_id" && (
