@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
+import Footer from "@/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,8 +48,9 @@ export default function RootLayout({
           Don't worry about the home page—we will adjust its padding in the step below so 
           it doesn't look double-spaced.
         */}
-        <div className="pt-[102px] md:pt-[60px] pb-20 md:pb-0 min-h-screen">
-          {children}
+        <div className="pt-[102px] md:pt-[60px] pb-20 md:pb-0 min-h-screen flex flex-col">
+          <main className="flex-1">{children}</main>
+          <Footer />
         </div>
         {/* Fixed Mobile Bottom Navigation */}
         <BottomNav /> 
