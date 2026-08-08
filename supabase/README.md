@@ -23,6 +23,7 @@ In **Supabase Dashboard → SQL Editor**, run in order:
 
 1. [`schema.sql`](./schema.sql) — tables, indexes, signup trigger, helper functions
 2. [`rls.sql`](./rls.sql) — row level security policies
+3. [`wallet.sql`](./wallet.sql) — wallet columns, transactions, credit functions
 
 If tables already exist, compare columns and add missing ones manually instead of re-running `create table`.
 
@@ -70,7 +71,13 @@ Signup stores metadata in `auth.users`:
 
 Profile page updates these via `supabase.auth.updateUser`.
 
-### 5. First super admin
+### 5. Phone auth (wallet welcome credits)
+
+**Dashboard → Authentication → Providers → Phone** — enable Phone provider for SMS OTP verification.
+
+Users verify phone on `/profile` to unlock **3 free ads + 300 EGP** (90-day balance expiry).
+
+### 6. First super admin
 
 After your first account signs up, promote yourself in SQL Editor:
 
@@ -92,7 +99,26 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 |--------|------|-------|
 | `id` | uuid PK | FK → `auth.users.id` |
 | `role` | text | `user` \| `admin` \| `super` |
+| `free_ads_remaining` | int | Welcome + unused free ad slots |
+| `balance` | numeric | EGP wallet balance |
+| `balance_expires_at` | timestamptz | Welcome balance expiry (90 days) |
+| `phone_verified` | boolean | Required before posting |
+| `welcome_credits_granted` | boolean | One-time welcome bundle |
 | `created_at` | timestamptz | auto |
+
+### `wallet_transactions`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid FK | |
+| `amount` | numeric | Negative = spend, positive = grant |
+| `type` | text | `welcome_grant`, `free_ad`, `ad_post`, … |
+| `ad_id` | uuid | Optional link to listing |
+| `description` | text | |
+| `created_at` | timestamptz | |
+
+**Ad posting:** 40 EGP per ad after free ads used. RPC: `can_post_ad`, `consume_ad_credit`, `grant_welcome_credits`.
 
 Auto-created on signup via `handle_new_user()` trigger.
 
@@ -126,12 +152,27 @@ Auto-created on signup via `handle_new_user()` trigger.
 
 ### `makes` / `models`
 
-Reference data for vehicle attributes. Public read. Populate manually or import CSV.
+Reference data for vehicle attributes. Public read.
+
+**Recommended:** run [`seed-vehicles.sql`](./seed-vehicles.sql) for ~58 makes and ~600 models (Egypt-focused, includes **Other** per make). Safe to re-run — skips duplicates.
 
 ```sql
--- Example
-insert into public.makes (name) values ('Toyota'), ('BMW');
-insert into public.models (name, make_id) values ('Corolla', 1), ('320i', 2);
+-- In SQL Editor: paste and run the full seed-vehicles.sql file
+```
+
+To regenerate the seed from source data:
+
+```bash
+node supabase/scripts/generate-vehicle-seed.mjs
+```
+
+Manual example (small test only):
+
+```sql
+insert into public.makes (name) values ('Toyota'), ('BMW') on conflict (name) do nothing;
+insert into public.models (name, make_id)
+select 'Corolla', id from public.makes where name = 'Toyota'
+and not exists (select 1 from public.models where make_id = makes.id and name = 'Corolla');
 ```
 
 ---

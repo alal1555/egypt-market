@@ -201,7 +201,7 @@ No email verification gate. No OAuth.
 
 ## Pending / Known Gaps
 
-- [ ] Wallet/balance feature (user chose profile only for now)
+- [x] Wallet: 3 free ads + 300 EGP welcome (90-day expiry), 40 EGP/ad, phone verify required
 - [ ] Migrate old rent ads with duplicate slugs in Supabase (manual SQL)
 - [x] Dead code cleanup (`src/data/ads.ts`, `vehicleService.ts`, `react-range`)
 - [x] Logo asset (`public/logo.png`)

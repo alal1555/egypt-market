@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { User, Mail, Phone, Shield, Crown, Calendar } from "lucide-react";
+import { User, Mail, Phone, Shield, Crown, Calendar, Wallet, Gift, CheckCircle } from "lucide-react";
+import {
+  AD_POST_PRICE_EGP,
+  WELCOME_BALANCE_EGP,
+  WELCOME_FREE_ADS,
+  WalletProfile,
+  adsRemainingFromBalance,
+  isBalanceExpired,
+  normalizeEgyptPhone,
+} from "@/lib/wallet";
 
 export default function ProfileClient() {
   const [loading, setLoading] = useState(true);
@@ -17,6 +26,21 @@ export default function ProfileClient() {
     phone: "",
     email: "",
   });
+  const [wallet, setWallet] = useState<WalletProfile | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [verifyPhone, setVerifyPhone] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+
+  const loadWallet = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("free_ads_remaining, balance, balance_expires_at, phone_verified, welcome_credits_granted")
+      .eq("id", userId)
+      .maybeSingle();
+    if (data) setWallet(data as WalletProfile);
+  };
 
   useEffect(() => {
     let active = true;
@@ -39,11 +63,20 @@ export default function ProfileClient() {
         }
         supabase
           .from("profiles")
-          .select("role")
+          .select("role, free_ads_remaining, balance, balance_expires_at, phone_verified, welcome_credits_granted")
           .eq("id", authUser.id)
           .maybeSingle()
           .then(({ data: profile }) => {
-            if (active && profile?.role) setRole(profile.role);
+            if (active && profile) {
+              if (profile.role) setRole(profile.role);
+              setWallet({
+                free_ads_remaining: profile.free_ads_remaining ?? 0,
+                balance: Number(profile.balance ?? 0),
+                balance_expires_at: profile.balance_expires_at,
+                phone_verified: profile.phone_verified ?? false,
+                welcome_credits_granted: profile.welcome_credits_granted ?? false,
+              });
+            }
           })
           .finally(() => {
             if (active) setLoading(false);
@@ -90,6 +123,46 @@ export default function ProfileClient() {
     }
 
     alert("Profile updated successfully!");
+  };
+
+  const handleSendOtp = async () => {
+    setVerifyMessage(null);
+    setVerifying(true);
+    const phone = normalizeEgyptPhone(verifyPhone || formData.phone);
+    const { error } = await supabase.auth.updateUser({ phone });
+    setVerifying(false);
+    if (error) {
+      setVerifyMessage(error.message);
+      return;
+    }
+    setOtpSent(true);
+    setVerifyMessage("Verification code sent via SMS.");
+  };
+
+  const handleVerifyOtp = async () => {
+    setVerifyMessage(null);
+    setVerifying(true);
+    const phone = normalizeEgyptPhone(verifyPhone || formData.phone);
+    const { error } = await supabase.auth.verifyOtp({
+      phone,
+      token: otpCode,
+      type: "phone_change",
+    });
+    if (error) {
+      setVerifying(false);
+      setVerifyMessage(error.message);
+      return;
+    }
+    const { data: granted, error: grantError } = await supabase.rpc("grant_welcome_credits");
+    setVerifying(false);
+    if (grantError) {
+      setVerifyMessage(grantError.message);
+      return;
+    }
+    if (user) await loadWallet(user.id);
+    setOtpSent(false);
+    setOtpCode("");
+    setVerifyMessage("Phone verified! Your welcome credits are active.");
   };
 
   if (loading) {
@@ -160,6 +233,99 @@ export default function ProfileClient() {
               Member since {memberSince}
             </span>
           )}
+        </div>
+
+        {/* Wallet */}
+        <div className="px-8 py-6 border-b bg-white">
+          <h2 className="flex items-center gap-2 font-black text-gray-900 mb-4">
+            <Wallet size={20} className="text-[#FF6321]" />
+            Ad Credits & Balance
+          </h2>
+
+          {wallet?.phone_verified ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                <p className="text-xs font-bold text-gray-500 uppercase">Free ads</p>
+                <p className="text-2xl font-black text-[#FF6321]">{wallet.free_ads_remaining}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                <p className="text-xs font-bold text-gray-500 uppercase">Balance</p>
+                <p className="text-2xl font-black text-[#FF6321]">{wallet.balance} EGP</p>
+              </div>
+              <div className="p-4 rounded-xl bg-gray-50 border">
+                <p className="text-xs font-bold text-gray-500 uppercase">Paid ads left</p>
+                <p className="text-2xl font-black text-gray-800">
+                  {adsRemainingFromBalance(
+                    wallet.balance,
+                    isBalanceExpired(wallet.balance_expires_at)
+                  )}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-1">{AD_POST_PRICE_EGP} EGP per ad</p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+              <p className="flex items-center gap-2 font-bold text-amber-900 mb-2">
+                <Gift size={18} />
+                Unlock {WELCOME_FREE_ADS} free ads + {WELCOME_BALANCE_EGP} EGP
+              </p>
+              <p className="text-sm text-amber-800 mb-4">
+                Verify your phone to activate welcome credits (balance expires in 90 days).
+              </p>
+              <div className="space-y-3">
+                <input
+                  type="tel"
+                  value={verifyPhone || formData.phone}
+                  onChange={(e) => setVerifyPhone(e.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full p-3 border rounded-xl text-sm"
+                />
+                {!otpSent ? (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={verifying}
+                    className="w-full py-2.5 rounded-xl bg-[#FF6321] text-white font-bold text-sm hover:bg-[#e85a1e] disabled:opacity-60"
+                  >
+                    {verifying ? "Sending…" : "Send verification code"}
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      placeholder="SMS code"
+                      className="flex-1 p-3 border rounded-xl text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={verifying || otpCode.length < 4}
+                      className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      Verify
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {wallet?.phone_verified && wallet.balance_expires_at && (
+            <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
+              <CheckCircle size={14} className="text-emerald-500" />
+              Balance valid until {new Date(wallet.balance_expires_at).toLocaleDateString()}
+              {isBalanceExpired(wallet.balance_expires_at) && " (expired)"}
+            </p>
+          )}
+
+          {verifyMessage && (
+            <p className="text-sm mt-3 font-medium text-gray-700">{verifyMessage}</p>
+          )}
+
+          <p className="text-xs text-gray-400 mt-3">Top-up coming soon — contact support for manual credits.</p>
         </div>
 
         <form onSubmit={handleSave} className="p-8 space-y-6">

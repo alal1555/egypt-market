@@ -12,6 +12,7 @@ Classifieds marketplace for Egypt — buy and sell vehicles, properties, pets, e
 - Browse and search listings with category-specific filters
 - Post ads with photos, dynamic attributes, and seller phone (call / WhatsApp)
 - User auth — signup, login, password reset, profile
+- **Wallet** — 3 free ads + 300 EGP after phone verify; 40 EGP per ad after that
 - Favorites, my ads, edit listings (re-approval flow)
 - Admin dashboard — approve, ban, and manage user roles
 - Mobile-first layout with bottom nav and filter bottom sheet
@@ -41,10 +42,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 
 Follow **[supabase/README.md](./supabase/README.md)** to:
 
-1. Run `supabase/schema.sql` and `supabase/rls.sql` in the SQL Editor
+1. Run `supabase/schema.sql`, `supabase/rls.sql`, and `supabase/wallet.sql` in the SQL Editor
 2. Create the `ad-images` storage bucket
-3. Configure auth redirect URLs
-4. Promote your first user to `super` admin
+3. Enable **Phone** auth provider (for wallet verification)
+4. Configure auth redirect URLs
+5. Promote your first user to `super` admin
 
 ### 4. Run dev server
 

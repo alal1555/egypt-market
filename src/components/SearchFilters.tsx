@@ -2,6 +2,7 @@
 
 import { SlidersHorizontal } from "lucide-react";
 import { CATEGORY_CONFIG } from "@/constants/categoryConfig";
+import { sortWithOtherLast } from "@/lib/utils";
 
 type Make = { id: number; name: string };
 type Model = { id: number; name: string; make_id: number };
@@ -121,9 +122,9 @@ export default function SearchFilters({
 
           {field.key === "model_id" && activeAttrs.make_id && (
             <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
-              {allModels
-                .filter((m) => m.make_id === parseInt(activeAttrs.make_id[0]))
-                .map((m) => (
+              {sortWithOtherLast(
+                allModels.filter((m) => m.make_id === parseInt(activeAttrs.make_id[0]))
+              ).map((m) => (
                   <label key={m.id} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-[#FF6321]">
                     <input
                       type="checkbox"

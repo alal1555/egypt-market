@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getAttributesBySlug, AttributeField } from '../constants/categoryConfig';
+import { sortWithOtherLast } from "@/lib/utils";
 
 interface DynamicAttributesProps {
   category: string;
@@ -40,7 +41,7 @@ export default function DynamicAttributes({
         .select("id, name")
         .eq("make_id", makeId)
         .order("name");
-      setModels(data || []);
+      setModels(sortWithOtherLast(data || []));
       setLoadingModels(false);
     }
     fetchModels();

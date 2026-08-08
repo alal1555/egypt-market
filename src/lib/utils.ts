@@ -6,6 +6,17 @@ export function formatPhoneForLink(phone: string): string {
   return digits.length === 10 ? `20${digits}` : digits;
 }
 
+/** Sort alphabetically, with "Other" always last (vehicle model dropdowns). */
+export function sortWithOtherLast<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const aOther = a.name.toLowerCase() === "other";
+    const bOther = b.name.toLowerCase() === "other";
+    if (aOther && !bOther) return 1;
+    if (!aOther && bOther) return -1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
+}
+
 export const extractSpecs = (attributes: any) => {
   if (!attributes || typeof attributes !== 'object') return {};
 

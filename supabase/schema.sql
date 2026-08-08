@@ -12,6 +12,11 @@ create extension if not exists "pgcrypto";
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   role text not null default 'user' check (role in ('user', 'admin', 'super')),
+  free_ads_remaining integer not null default 0,
+  balance numeric not null default 0 check (balance >= 0),
+  balance_expires_at timestamptz,
+  phone_verified boolean not null default false,
+  welcome_credits_granted boolean not null default false,
   created_at timestamptz not null default now()
 );
 
