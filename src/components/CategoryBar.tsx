@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Car, Building2, Smartphone, Shirt, Briefcase, LayoutGrid, Dog, Anchor, GraduationCap, ChevronDown, Sofa, Wrench, Baby } from "lucide-react";
+import { Car, Building2, Smartphone, Shirt, Briefcase, LayoutGrid, Dog, Anchor, GraduationCap, ChevronDown, Sofa, Wrench, Baby, Dumbbell, BookOpen, UtensilsCrossed, Factory } from "lucide-react";
 import { CATEGORY_CONFIG } from "@/constants/categoryConfig";
 
 const getIconForCategory = (slug: string) => {
@@ -10,6 +10,7 @@ const getIconForCategory = (slug: string) => {
     "prop-sale": Building2, "prop-rent": Building2, "electronics": Smartphone,
     "fashion": Shirt, "business": Briefcase, "pets": Dog, "education": GraduationCap,
     "home-furniture": Sofa, "services": Wrench, "kids": Baby,
+    "sports": Dumbbell, "books": BookOpen, "food": UtensilsCrossed, "biz-equipment": Factory,
   };
   return icons[slug] || LayoutGrid;
 };

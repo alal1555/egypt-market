@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { getAttributesBySlug, AttributeField } from "../constants/categoryConfig";
+import { getPostAdAttributes, AttributeField } from "../constants/categoryConfig";
 import { sortWithOtherLast } from "@/lib/utils";
 
 interface DynamicAttributesProps {
@@ -26,7 +26,7 @@ export default function DynamicAttributes({
   makes,
   loadingMakes,
 }: DynamicAttributesProps) {
-  const fields: AttributeField[] = getAttributesBySlug(category);
+  const fields: AttributeField[] = getPostAdAttributes(category);
 
   const [models, setModels] = useState<{ id: number; name: string }[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);

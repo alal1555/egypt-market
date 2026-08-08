@@ -63,6 +63,27 @@ const SERVICE_TYPES = [
   "Tutoring",
   "Other",
 ];
+const COLORS = [
+  "Black",
+  "White",
+  "Silver",
+  "Gray",
+  "Red",
+  "Blue",
+  "Green",
+  "Brown",
+  "Beige",
+  "Gold",
+  "Other",
+];
+const PAYMENT_PLAN = ["Cash", "Installments", "Mortgage Available"];
+const PRICING_TYPE = ["Fixed Price", "Hourly", "Daily", "Quote on Request"];
+const HEAVY_EQUIPMENT = ["Excavator", "Crane", "Loader", "Bulldozer", "Forklift", "Generator", "Other"];
+
+/** Shown on every listing — merged into attributes at post time */
+export const GLOBAL_AD_ATTRIBUTES: AttributeField[] = [
+  { label: "Price Negotiable", key: "negotiable", type: "toggle" },
+];
 
 const carAttrs = (rent = false): AttributeField[] => {
   const base: AttributeField[] = [
@@ -82,6 +103,7 @@ const carAttrs = (rent = false): AttributeField[] => {
     ...base,
     { label: "Mileage (km)", key: "mileage", type: "range", min: 0 },
     { label: "Condition", key: "condition", type: "select", options: [...VEHICLE_CONDITION] },
+    { label: "Color", key: "color", type: "select", options: [...COLORS] },
   ];
 };
 
@@ -139,6 +161,25 @@ export const CATEGORY_CONFIG: MainCategory[] = [
           { label: "Condition", key: "condition", type: "select", options: [...VEHICLE_CONDITION] },
         ],
       },
+      {
+        name: "Heavy Equipment",
+        slug: "vs_heavy",
+        attributes: [
+          { label: "Equipment Type", key: "equipment_type", type: "select", options: [...HEAVY_EQUIPMENT] },
+          { label: "Year", key: "year", type: "range", min: 1980 },
+          { label: "Hours Used", key: "hours", type: "range", min: 0 },
+          { label: "Condition", key: "condition", type: "select", options: [...VEHICLE_CONDITION] },
+        ],
+      },
+      {
+        name: "Electric Bikes",
+        slug: "vs_ebikes",
+        attributes: [
+          { label: "Brand", key: "brand", type: "text", placeholder: "e.g. Xiaomi, E-Bike" },
+          { label: "Year", key: "year", type: "range", min: 2015 },
+          { label: "Condition", key: "condition", type: "select", options: [...VEHICLE_CONDITION] },
+        ],
+      },
     ],
   },
   {
@@ -170,6 +211,15 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         attributes: [
           { label: "Year", key: "year", type: "range", min: 1990 },
           { label: "Engine (cc)", key: "engine_cc", type: "range", min: 50 },
+        ],
+      },
+      {
+        name: "Heavy Equipment",
+        slug: "vr_heavy",
+        attributes: [
+          { label: "Equipment Type", key: "equipment_type", type: "select", options: [...HEAVY_EQUIPMENT] },
+          { label: "Year", key: "year", type: "range", min: 1980 },
+          { label: "With Operator", key: "with_operator", type: "toggle" },
         ],
       },
     ],
@@ -243,7 +293,10 @@ export const CATEGORY_CONFIG: MainCategory[] = [
           { label: "Bedrooms", key: "bedrooms", type: "range", min: 0 },
           { label: "Bathrooms", key: "bathrooms", type: "range", min: 0 },
           { label: "Area (sqm)", key: "area", type: "range", min: 0 },
+          { label: "Floor", key: "floor", type: "range", min: 0 },
+          { label: "Elevator", key: "elevator", type: "toggle" },
           { label: "Finishing", key: "finishing", type: "select", options: [...FINISHING] },
+          { label: "Payment Plan", key: "payment_plan", type: "select", options: [...PAYMENT_PLAN] },
           { label: "In Compound", key: "in_compound", type: "toggle" },
         ],
       },
@@ -277,9 +330,33 @@ export const CATEGORY_CONFIG: MainCategory[] = [
           { label: "Bedrooms", key: "bedrooms", type: "range", min: 0 },
           { label: "Bathrooms", key: "bathrooms", type: "range", min: 0 },
           { label: "Area (sqm)", key: "area", type: "range", min: 0 },
+          { label: "Floor", key: "floor", type: "range", min: 0 },
+          { label: "Elevator", key: "elevator", type: "toggle" },
           { label: "Furnished", key: "furnished", type: "toggle" },
           { label: "Rental Period", key: "rental_period", type: "select", options: [...RENTAL_PERIOD] },
           { label: "In Compound", key: "in_compound", type: "toggle" },
+        ],
+      },
+      {
+        name: "Room & Shared",
+        slug: "pr_room",
+        attributes: [
+          { label: "Room Type", key: "room_type", type: "select", options: ["Single Room", "Shared Room", "Master Room"] },
+          { label: "Area (sqm)", key: "area", type: "range", min: 0 },
+          { label: "Furnished", key: "furnished", type: "toggle" },
+          { label: "Rental Period", key: "rental_period", type: "select", options: [...RENTAL_PERIOD] },
+          { label: "Gender Preference", key: "gender_pref", type: "select", options: ["Any", "Male Only", "Female Only"] },
+        ],
+      },
+      {
+        name: "Chalets & Vacation",
+        slug: "pr_chalet",
+        attributes: [
+          { label: "Bedrooms", key: "bedrooms", type: "range", min: 0 },
+          { label: "Area (sqm)", key: "area", type: "range", min: 0 },
+          { label: "Furnished", key: "furnished", type: "toggle" },
+          { label: "Rental Period", key: "rental_period", type: "select", options: ["Daily", "Weekly", "Monthly"] },
+          { label: "Beach Access", key: "beach_access", type: "toggle" },
         ],
       },
       {
@@ -373,6 +450,15 @@ export const CATEGORY_CONFIG: MainCategory[] = [
       { name: "Fish", slug: "pets_fish", attributes: [{ label: "Type", key: "species", type: "text" }] },
       { name: "Reptiles", slug: "pets_reptiles", attributes: [{ label: "Species", key: "species", type: "text" }] },
       { name: "Small Animals", slug: "pets_small", attributes: [{ label: "Species", key: "species", type: "text" }] },
+      {
+        name: "Livestock",
+        slug: "pets_livestock",
+        attributes: [
+          { label: "Animal", key: "species", type: "select", options: ["Cattle", "Sheep", "Goat", "Camel", "Poultry", "Other"] },
+          { label: "Age", key: "age", type: "text", placeholder: "e.g. 2 years" },
+          { label: "Quantity", key: "quantity", type: "range", min: 1 },
+        ],
+      },
     ],
   },
   {
@@ -384,6 +470,18 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         slug: "elec_mobile",
         attributes: [
           { label: "Brand", key: "brand", type: "select", options: [...PHONE_BRANDS] },
+          { label: "Model", key: "device_model", type: "text", placeholder: "e.g. iPhone 15, Galaxy S24" },
+          { label: "Storage", key: "storage", type: "select", options: ["64GB", "128GB", "256GB", "512GB", "1TB"] },
+          { label: "Color", key: "color", type: "select", options: [...COLORS] },
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Tablets",
+        slug: "elec_tablet",
+        attributes: [
+          { label: "Brand", key: "brand", type: "select", options: ["Apple", "Samsung", "Huawei", "Lenovo", "Other"] },
+          { label: "Model", key: "device_model", type: "text", placeholder: "e.g. iPad Air, Tab S9" },
           { label: "Storage", key: "storage", type: "select", options: ["64GB", "128GB", "256GB", "512GB", "1TB"] },
           { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
         ],
@@ -393,6 +491,7 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         slug: "elec_laptop",
         attributes: [
           { label: "Brand", key: "brand", type: "select", options: [...LAPTOP_BRANDS] },
+          { label: "Model", key: "device_model", type: "text", placeholder: "e.g. MacBook Pro, ThinkPad" },
           { label: "RAM", key: "ram", type: "select", options: ["8GB", "16GB", "32GB", "64GB"] },
           { label: "Storage", key: "storage", type: "select", options: ["256GB", "512GB", "1TB", "2TB"] },
           { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
@@ -411,6 +510,15 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         slug: "elec_gaming",
         attributes: [
           { label: "Platform", key: "platform", type: "select", options: ["PlayStation", "Xbox", "Nintendo", "PC", "Other"] },
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Wearables",
+        slug: "elec_wearable",
+        attributes: [
+          { label: "Brand", key: "brand", type: "select", options: ["Apple", "Samsung", "Huawei", "Garmin", "Other"] },
+          { label: "Type", key: "wearable_type", type: "select", options: ["Smartwatch", "Fitness Band", "Earbuds", "Other"] },
           { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
         ],
       },
@@ -449,6 +557,7 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         attributes: [
           { label: "Gender", key: "gender", type: "select", options: ["Men", "Women", "Unisex", "Kids"] },
           { label: "Size", key: "size", type: "select", options: ["XS", "S", "M", "L", "XL", "XXL"] },
+          { label: "Color", key: "color", type: "select", options: [...COLORS] },
           { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
         ],
       },
@@ -458,6 +567,7 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         attributes: [
           { label: "Gender", key: "gender", type: "select", options: ["Men", "Women", "Unisex", "Kids"] },
           { label: "Size", key: "size", type: "text", placeholder: "e.g. 42, Medium" },
+          { label: "Color", key: "color", type: "select", options: [...COLORS] },
           { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
         ],
       },
@@ -515,13 +625,17 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         slug: "svc_home",
         attributes: [
           { label: "Service Type", key: "service_type", type: "select", options: [...SERVICE_TYPES] },
+          { label: "Pricing", key: "pricing_type", type: "select", options: [...PRICING_TYPE] },
+          { label: "Service Area", key: "service_area", type: "text", placeholder: "e.g. Cairo, Giza, 6th October" },
         ],
       },
       {
         name: "Professional Services",
         slug: "svc_pro",
         attributes: [
-          { label: "Service Type", key: "service_type", type: "select", options: ["Legal", "Accounting", "Design", "IT", "Other"] },
+          { label: "Service Type", key: "service_type", type: "select", options: ["Legal", "Accounting", "Design", "IT", "Marketing", "Other"] },
+          { label: "Pricing", key: "pricing_type", type: "select", options: [...PRICING_TYPE] },
+          { label: "Service Area", key: "service_area", type: "text", placeholder: "e.g. Cairo, Alexandria" },
         ],
       },
     ],
@@ -537,6 +651,8 @@ export const CATEGORY_CONFIG: MainCategory[] = [
           { label: "Employment Type", key: "employment_type", type: "select", options: ["Full-time", "Part-time", "Contract", "Internship"] },
           { label: "Remote", key: "remote", type: "toggle" },
           { label: "Experience (years)", key: "experience_years", type: "range", min: 0 },
+          { label: "Salary From (EGP)", key: "salary_min", type: "range", min: 0 },
+          { label: "Salary To (EGP)", key: "salary_max", type: "range", min: 0 },
         ],
       },
       {
@@ -545,7 +661,139 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         attributes: [
           { label: "Field", key: "field", type: "text", placeholder: "e.g. Marketing, Engineering" },
           { label: "Experience (years)", key: "experience_years", type: "range", min: 0 },
+          { label: "Expected Salary (EGP)", key: "salary_expected", type: "range", min: 0 },
           { label: "Open to Remote", key: "remote", type: "toggle" },
+        ],
+      },
+      {
+        name: "Business for Sale",
+        slug: "bus_sale",
+        attributes: [
+          { label: "Business Type", key: "business_type", type: "select", options: ["Restaurant", "Cafe", "Shop", "Pharmacy", "Other"] },
+          { label: "Years Operating", key: "years_operating", type: "range", min: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Sports & Hobbies",
+    slug: "sports",
+    subs: [
+      {
+        name: "Bicycles",
+        slug: "sport_bikes",
+        attributes: [
+          { label: "Type", key: "bike_type", type: "select", options: ["Mountain", "Road", "City", "Kids", "Other"] },
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Gym & Fitness",
+        slug: "sport_gym",
+        attributes: [
+          { label: "Equipment Type", key: "equipment_type", type: "text", placeholder: "e.g. Treadmill, Weights" },
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Camping & Outdoor",
+        slug: "sport_camp",
+        attributes: [
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Team Sports",
+        slug: "sport_team",
+        attributes: [
+          { label: "Sport", key: "sport", type: "select", options: ["Football", "Basketball", "Tennis", "Padel", "Other"] },
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Books & Media",
+    slug: "books",
+    subs: [
+      {
+        name: "Books",
+        slug: "books_general",
+        attributes: [
+          { label: "Genre", key: "genre", type: "select", options: ["Fiction", "Non-Fiction", "Religious", "Children", "Other"] },
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Textbooks",
+        slug: "books_textbook",
+        attributes: [
+          { label: "Subject", key: "subject", type: "text", placeholder: "e.g. Mathematics, Medicine" },
+          { label: "Level", key: "level", type: "select", options: ["School", "University", "Professional"] },
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Magazines & Comics",
+        slug: "books_magazine",
+        attributes: [
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Food & Catering",
+    slug: "food",
+    subs: [
+      {
+        name: "Homemade Food",
+        slug: "food_homemade",
+        attributes: [
+          { label: "Cuisine", key: "cuisine", type: "select", options: ["Egyptian", "Levantine", "Asian", "Western", "Other"] },
+          { label: "Delivery", key: "delivery", type: "toggle" },
+        ],
+      },
+      {
+        name: "Catering Services",
+        slug: "food_catering",
+        attributes: [
+          { label: "Event Type", key: "event_type", type: "select", options: ["Wedding", "Corporate", "Birthday", "Other"] },
+          { label: "Service Area", key: "service_area", type: "text", placeholder: "Areas you serve" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Business Equipment",
+    slug: "biz-equipment",
+    subs: [
+      {
+        name: "Restaurant Equipment",
+        slug: "be_restaurant",
+        attributes: [
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Office Equipment",
+        slug: "be_office",
+        attributes: [
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Industrial & Factory",
+        slug: "be_industrial",
+        attributes: [
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
+        ],
+      },
+      {
+        name: "Medical Equipment",
+        slug: "be_medical",
+        attributes: [
+          { label: "Condition", key: "condition", type: "select", options: [...CONDITION] },
         ],
       },
     ],
@@ -651,6 +899,11 @@ export const getAttributesBySlug = (slug: string): AttributeField[] => {
     if (sub) return sub.attributes;
   }
   return [];
+};
+
+/** Sub-category fields + global fields (e.g. negotiable) for post/edit ad forms */
+export const getPostAdAttributes = (subSlug: string): AttributeField[] => {
+  return [...getAttributesBySlug(subSlug), ...GLOBAL_AD_ATTRIBUTES];
 };
 
 export const getCategoryGroups = (): Record<string, string[]> => {

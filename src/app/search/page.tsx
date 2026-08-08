@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
 import SearchFilters from "@/components/SearchFilters";
 import { SlidersHorizontal, X } from "lucide-react";
-import { CATEGORY_CONFIG, getAttributesBySlug } from "@/constants/categoryConfig";
+import { CATEGORY_CONFIG, getAttributesBySlug, getCategoryGroups } from "@/constants/categoryConfig";
 import { extractSpecs } from "@/lib/utils";
 
 interface Ad {
@@ -87,7 +87,12 @@ function SearchResults() {
     async function executeSearch() {
       let q = supabase.from("ads").select("*").eq("status", "active");
 
-      if (subCatFilter) q = q.eq("category_slug", subCatFilter);
+      if (subCatFilter) {
+        q = q.eq("category_slug", subCatFilter);
+      } else if (mainCatFilter) {
+        const subs = getCategoryGroups()[mainCatFilter];
+        if (subs?.length) q = q.in("category_slug", subs);
+      }
       if (query) q = q.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
 
       Object.entries(activeAttrs).forEach(([key, values]) => {
@@ -114,7 +119,7 @@ function SearchResults() {
       setAds(data || []);
     }
     executeSearch();
-  }, [query, subCatFilter, activeAttrs, subCategoryAttributes]);
+  }, [query, mainCatFilter, subCatFilter, activeAttrs, subCategoryAttributes]);
 
   const filterProps = {
     mainCatFilter,
