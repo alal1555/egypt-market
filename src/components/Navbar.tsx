@@ -3,14 +3,16 @@
 import { useEffect, useState, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Search, Compass, Heart, Shield, Crown, LayoutGrid, PlusCircle, User } from "lucide-react";
+import { HOME_REFRESH_EVENT } from "@/lib/home";
 
 function NavbarContent() {
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [textInput, setTextInput] = useState(""); 
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   // Sync the search input with the URL 'q' parameter
@@ -73,7 +75,16 @@ function NavbarContent() {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 md:gap-4 px-3 md:px-4 h-14 md:h-16 overflow-hidden">
         
         {/* LOGO */}
-        <Link href="/" className="flex items-center hover:opacity-90 transition-opacity shrink-0 h-full py-1">
+        <Link
+          href="/"
+          onClick={() => {
+            if (pathname === "/") {
+              window.dispatchEvent(new Event(HOME_REFRESH_EVENT));
+            }
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="flex items-center hover:opacity-90 transition-opacity shrink-0 h-full py-1"
+        >
           <img
             src="/logo-nav.png"
             alt="Yaddii Logo"

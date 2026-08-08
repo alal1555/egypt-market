@@ -1,15 +1,18 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
 import CategoryBar from "@/components/CategoryBar";
 import { extractSpecs } from "@/lib/utils";
+import { HOME_REFRESH_EVENT } from "@/lib/home";
 
 /** Latest active ads shown on home — full catalog lives on /search */
 const HOME_RECENT_LIMIT = 36;
+const FETCH_TIMEOUT_MS = 15_000;
+const LOADING_RETRY_MS = 12_000;
 
 interface Ad {
   id: string; title: string; price: number; location: string; category_slug: string;
@@ -20,33 +23,96 @@ function HomeContent() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [totalActive, setTotalActive] = useState(0);
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
+  const fetchGenRef = useRef(0);
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      const [adsRes, makesRes, modelsRes] = await Promise.all([
-        supabase
-          .from("ads")
-          .select("*", { count: "exact" })
-          .eq("status", "active")
-          .order("created_at", { ascending: false })
-          .limit(HOME_RECENT_LIMIT),
-        supabase.from("makes").select("id, name"),
-        supabase.from("models").select("id, name"),
+  const loadHomeData = useCallback(async () => {
+    const gen = ++fetchGenRef.current;
+    setLoading(true);
+    setFetchError(null);
+
+    const timeout = new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error("Request timed out")), FETCH_TIMEOUT_MS);
+    });
+
+    try {
+      const [adsRes, makesRes, modelsRes] = await Promise.race([
+        Promise.all([
+          supabase
+            .from("ads")
+            .select("*", { count: "exact" })
+            .eq("status", "active")
+            .order("created_at", { ascending: false })
+            .limit(HOME_RECENT_LIMIT),
+          supabase.from("makes").select("id, name"),
+          supabase.from("models").select("id, name"),
+        ]),
+        timeout,
       ]);
-      if (adsRes.data) setAds(adsRes.data);
-      if (adsRes.count != null) setTotalActive(adsRes.count);
-      if (makesRes.data) setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
-      if (modelsRes.data) setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
-      setLoading(false);
+
+      if (gen !== fetchGenRef.current) return;
+
+      if (adsRes.error) throw adsRes.error;
+      if (makesRes.error) throw makesRes.error;
+      if (modelsRes.error) throw modelsRes.error;
+
+      setAds(adsRes.data ?? []);
+      setTotalActive(adsRes.count ?? adsRes.data?.length ?? 0);
+      if (makesRes.data) {
+        setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
+      }
+      if (modelsRes.data) {
+        setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
+      }
+    } catch (err: unknown) {
+      if (gen !== fetchGenRef.current) return;
+      const message = err instanceof Error ? err.message : "Failed to load listings";
+      setFetchError(message);
+    } finally {
+      if (gen === fetchGenRef.current) setLoading(false);
     }
-    fetchData();
   }, []);
 
+  // Refetch when navigating to home, on logo re-click, or after refreshKey bump
+  useEffect(() => {
+    if (pathname !== "/") return;
+
+    loadHomeData();
+    return () => {
+      fetchGenRef.current += 1;
+    };
+  }, [pathname, refreshKey, loadHomeData]);
+
+  // Logo click while already on home
+  useEffect(() => {
+    const onRefresh = () => setRefreshKey((k) => k + 1);
+    window.addEventListener(HOME_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(HOME_REFRESH_EVENT, onRefresh);
+  }, []);
+
+  // Browser back/forward cache can restore the page without re-running effects
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted && pathname === "/") setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [pathname]);
+
+  // Recover if a fetch hangs (tab sleep, slow network)
+  useEffect(() => {
+    if (!loading || pathname !== "/") return;
+    const retryTimer = window.setTimeout(() => setRefreshKey((k) => k + 1), LOADING_RETRY_MS);
+    return () => window.clearTimeout(retryTimer);
+  }, [loading, pathname]);
+
   const hasMore = totalActive > ads.length;
+  const showFullLoading = loading && ads.length === 0 && !fetchError;
 
   return (
     <div className="mt-[60px] pt-6 md:mt-16 md:pt-5 w-full min-h-screen">
@@ -59,7 +125,7 @@ function HomeContent() {
       </section>
 
       <main className="mx-auto max-w-[1400px] w-full px-3 py-8 min-h-screen">
-        {!loading && ads.length > 0 && (
+        {!loading && !fetchError && ads.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 px-1">
             <div>
               <h3 className="text-lg font-black text-gray-900">Recent listings</h3>
@@ -78,10 +144,14 @@ function HomeContent() {
           </div>
         )}
 
-        {loading ? (
+        {showFullLoading ? (
           <div className="text-center py-20 text-gray-400">Loading...</div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6 items-stretch">
+        ) : !fetchError && ads.length > 0 ? (
+          <>
+            {loading && (
+              <p className="text-center text-xs text-gray-400 mb-4">Updating listings…</p>
+            )}
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6 items-stretch">
             {ads.map((ad) => (
               <AdCard
                 key={ad.id}
@@ -97,10 +167,24 @@ function HomeContent() {
                 modelName={ad.attributes?.model_id ? modelsMap[ad.attributes.model_id] : undefined}
               />
             ))}
+            </div>
+          </>
+        ) : null}
+
+        {!loading && fetchError && (
+          <div className="text-center py-16 text-gray-500">
+            <p className="mb-4">Could not load listings. Please try again.</p>
+            <button
+              type="button"
+              onClick={() => setRefreshKey((k) => k + 1)}
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#FF6321] text-white text-sm font-bold hover:bg-[#e85a1e]"
+            >
+              Retry
+            </button>
           </div>
         )}
 
-        {!loading && ads.length === 0 && (
+        {!loading && !fetchError && ads.length === 0 && (
           <div className="text-center py-16 text-gray-500">
             <p className="mb-4">No listings yet. Be the first to post an ad!</p>
             <Link
@@ -112,7 +196,7 @@ function HomeContent() {
           </div>
         )}
 
-        {!loading && ads.length > 0 && hasMore && (
+        {!loading && !fetchError && ads.length > 0 && hasMore && (
           <div className="text-center mt-10">
             <Link
               href="/search"
