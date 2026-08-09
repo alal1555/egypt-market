@@ -117,6 +117,7 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         name: "Buses",
         slug: "vs_buses",
         attributes: [
+          { label: "Brand", key: "brand", type: "text", placeholder: "e.g. Mercedes, Toyota Coaster, Hyundai" },
           {
             label: "Size",
             key: "size",
@@ -191,6 +192,7 @@ export const CATEGORY_CONFIG: MainCategory[] = [
         name: "Buses",
         slug: "vr_buses",
         attributes: [
+          { label: "Brand", key: "brand", type: "text", placeholder: "e.g. Mercedes, Toyota Coaster, Hyundai" },
           { label: "Year", key: "year", type: "range", min: 1990 },
           { label: "Fuel Type", key: "fuel_type", type: "select", options: ["Diesel", "Gasoline"] },
           { label: "With Driver", key: "with_driver", type: "toggle" },
