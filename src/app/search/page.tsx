@@ -105,6 +105,9 @@ function SearchResults() {
           const [minStr, maxStr] = values[0].split("-");
           if (minStr !== "" && !isNaN(Number(minStr))) q = q.gte(`attributes->${key}`, Number(minStr));
           if (maxStr !== "" && !isNaN(Number(maxStr))) q = q.lte(`attributes->${key}`, Number(maxStr));
+        } else if (field?.type === "text") {
+          const term = values[0]?.trim();
+          if (term) q = q.ilike(`attributes->>${key}`, `%${term}%`);
         } else if (field?.type === "select" || key === "make_id" || key === "model_id") {
           q = q.in(`attributes->>${key}`, values);
         } else if (values.length === 1) {

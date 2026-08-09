@@ -115,6 +115,18 @@ export default function SearchFilters({
             </label>
           ) : null}
 
+          {field.type === "text" ? (
+            <input
+              type="text"
+              placeholder={field.placeholder || `Search ${field.label.toLowerCase()}…`}
+              className="w-full p-2 border rounded-lg text-sm"
+              value={activeAttrs[field.key]?.[0] || ""}
+              onChange={(e) =>
+                updateURL({ [field.key]: e.target.value.trim() || null })
+              }
+            />
+          ) : null}
+
           {field.key === "make_id" && (
             <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
               {allMakes.map((m) => (
