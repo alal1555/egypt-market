@@ -49,6 +49,7 @@ create index if not exists wallet_transactions_user_id_idx
 
 alter table public.wallet_transactions enable row level security;
 
+drop policy if exists "wallet_transactions_select_own" on public.wallet_transactions;
 create policy "wallet_transactions_select_own"
   on public.wallet_transactions for select
   to authenticated

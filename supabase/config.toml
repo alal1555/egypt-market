@@ -1,0 +1,5 @@
+# Supabase CLI config (optional — deploy functions from repo root)
+# See supabase/README.md → Phone auth (SMS Misr)
+
+[functions.send-sms]
+verify_jwt = false

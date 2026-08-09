@@ -71,11 +71,101 @@ Signup stores metadata in `auth.users`:
 
 Profile page updates these via `supabase.auth.updateUser`.
 
-### 5. Phone auth (wallet welcome credits)
+### 5. Phone auth (wallet welcome credits) — SMS Misr
 
-**Dashboard → Authentication → Providers → Phone** — enable Phone provider for SMS OTP verification.
+The app sends OTP from **Profile → Ad Credits** via Supabase Auth. Supabase generates the code; [`functions/send-sms/`](./functions/send-sms/) delivers it through **SMS Misr** (Egypt).
 
-Users verify phone on `/profile` to unlock **3 free ads + 300 EGP** (90-day balance expiry).
+**App flow (no Next.js changes):**
+
+1. User clicks **Send verification code** → `updateUser({ phone })`
+2. Supabase triggers **Send SMS hook** → Edge Function → SMS Misr OTP API
+3. User enters code → `verifyOtp({ type: "phone_change" })`
+4. `grant_welcome_credits()` → 3 free ads + 300 EGP
+
+#### A. SMS Misr console (you)
+
+| Item | Where |
+|------|--------|
+| Username & password | [Client/Settings](https://smsmisr.com/Client/Settings) |
+| Sender token (test) | **Test Sender** — use while `SMSMISR_ENVIRONMENT=2` |
+| Sender token (live) | **Yaddii** — after status = Approved |
+| Template token | OTP / Templates section — **required** for OTP API |
+
+Test sender token (from SMS Misr docs, test env only):
+
+```
+b611afb996655a94c8e942a823f1421de42bf8335d24ba1f84c437b2ab11ca27
+```
+
+Request an OTP template if you have none (e.g. “Your Yaddii verification code is {otp}”).
+
+#### B. Deploy Edge Function
+
+Install [Supabase CLI](https://supabase.com/docs/guides/cli), log in, link project:
+
+```bash
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+```
+
+Set secrets (use **Test Sender** + `environment=2` until Yaddii is approved):
+
+```bash
+supabase secrets set \
+  SMSMISR_USERNAME="your_username" \
+  SMSMISR_PASSWORD="your_password" \
+  SMSMISR_SENDER="b611afb996655a94c8e942a823f1421de42bf8335d24ba1f84c437b2ab11ca27" \
+  SMSMISR_TEMPLATE="your_template_token" \
+  SMSMISR_ENVIRONMENT="2"
+```
+
+Deploy (hook must run without JWT — see `config.toml`):
+
+```bash
+supabase functions deploy send-sms --no-verify-jwt
+```
+
+#### C. Supabase Dashboard
+
+1. **Authentication → Providers → Phone** — enable Phone provider
+2. **SMS provider** — choose **Hook** (not Twilio / Textlocal)
+3. **Authentication → Hooks → Send SMS**
+   - Enable hook
+   - URL: `https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-sms`
+   - Generate **hook secret** → set as `SEND_SMS_HOOK_SECRET`:
+
+```bash
+supabase secrets set SEND_SMS_HOOK_SECRET="v1,whsec_..."
+```
+
+4. Re-deploy or restart function after adding the secret
+
+#### D. Go live (after Yaddii sender approved)
+
+```bash
+supabase secrets set \
+  SMSMISR_SENDER="your_yaddii_sender_token" \
+  SMSMISR_ENVIRONMENT="1"
+```
+
+#### E. Dev bypass (no SMS)
+
+```sql
+select public.grant_welcome_credits('USER_UUID');
+```
+
+#### Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Hook 500 / invalid signature | `SEND_SMS_HOOK_SECRET` must match Dashboard hook secret exactly |
+| SMS Misr 4903 | Wrong username/password |
+| SMS Misr 4904 | Invalid sender token |
+| SMS Misr 4909 | Invalid template token — create OTP template in console |
+| SMS Misr 4906 | Insufficient credit — recharge balance |
+| No SMS, no error | Check **Edge Functions → send-sms → Logs** |
+
+Function logs: `supabase functions logs send-sms`
 
 ### 6. First super admin
 
@@ -250,6 +340,10 @@ where (attributes->>'year') ~ '^[0-9]+$';
 |------|---------|
 | `schema.sql` | Tables, indexes, triggers, helper functions |
 | `rls.sql` | Row Level Security policies |
+| `wallet.sql` | Wallet columns, RPCs, transactions |
+| `seed-vehicles.sql` | Vehicle makes/models seed |
+| `functions/send-sms/` | Auth Send SMS hook → SMS Misr OTP |
+| `config.toml` | Edge Function config (`verify_jwt = false` for hook) |
 | `README.md` | This guide |
 
 After schema changes, update [`PROJECT.md`](../PROJECT.md) and test with the anon key (same as production client).

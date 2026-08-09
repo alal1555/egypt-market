@@ -14,6 +14,44 @@ import {
   normalizeEgyptPhone,
 } from "@/lib/wallet";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+function authErrorMessage(body: Record<string, unknown>, status: number): string {
+  const msg =
+    (body.msg as string) ||
+    (body.message as string) ||
+    (body.error_description as string) ||
+    (typeof body.error === "string" ? body.error : undefined);
+  return msg || `Request failed (${status})`;
+}
+
+/** Direct REST call — avoids supabase-js updateUser hanging while SMS hook runs */
+async function updateAuthUser(
+  accessToken: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: supabaseAnonKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(25_000),
+  });
+
+  const resBody = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok) {
+    throw new Error(authErrorMessage(resBody, response.status));
+  }
+}
+
+function isValidEgyptPhone(input: string): boolean {
+  return /^\+20(10|11|12|15)\d{8}$/.test(normalizeEgyptPhone(input));
+}
+
 export default function ProfileClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -29,7 +67,7 @@ export default function ProfileClient() {
   const [wallet, setWallet] = useState<WalletProfile | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
-  const [verifyPhone, setVerifyPhone] = useState("");
+  const [otpPhone, setOtpPhone] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
 
@@ -109,40 +147,78 @@ export default function ProfileClient() {
     if (!user) return;
 
     setSaving(true);
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        full_name: formData.fullName,
-        phone_number: formData.phone,
-      },
-    });
-    setSaving(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert("Session expired. Please log in again.");
+        return;
+      }
 
-    if (error) {
-      alert(error.message);
-      return;
+      await updateAuthUser(session.access_token, {
+        data: {
+          full_name: formData.fullName,
+          phone_number: formData.phone,
+        },
+      });
+      alert("Profile updated successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not save profile.");
+    } finally {
+      setSaving(false);
     }
+  };
 
-    alert("Profile updated successfully!");
+  const handlePhoneChange = (value: string) => {
+    setFormData({ ...formData, phone: value });
+    if (otpSent && value.trim() !== otpPhone) {
+      setOtpSent(false);
+      setOtpCode("");
+      setOtpPhone("");
+      setVerifyMessage("Phone number changed — send a new verification code.");
+    }
   };
 
   const handleSendOtp = async () => {
     setVerifyMessage(null);
-    setVerifying(true);
-    const phone = normalizeEgyptPhone(verifyPhone || formData.phone);
-    const { error } = await supabase.auth.updateUser({ phone });
-    setVerifying(false);
-    if (error) {
-      setVerifyMessage(error.message);
+    const phone = normalizeEgyptPhone(formData.phone);
+
+    if (!isValidEgyptPhone(formData.phone)) {
+      setVerifyMessage("Enter a valid Egyptian mobile number (e.g. 01012345678).");
       return;
     }
-    setOtpSent(true);
-    setVerifyMessage("Verification code sent via SMS.");
+
+    setVerifying(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setVerifyMessage("Session expired. Please log in again.");
+        return;
+      }
+
+      await updateAuthUser(session.access_token, {
+        data: { phone_number: formData.phone },
+        phone,
+      });
+
+      setOtpSent(true);
+      setOtpPhone(formData.phone.trim());
+      setVerifyMessage(`Verification code sent via SMS to ${formData.phone.trim()}.`);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "TimeoutError") {
+        setVerifyMessage("Request timed out. Check Supabase → Edge Functions → send-sms → Logs.");
+      } else {
+        const message = err instanceof Error ? err.message : "Could not send verification code.";
+        setVerifyMessage(message);
+      }
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const handleVerifyOtp = async () => {
     setVerifyMessage(null);
     setVerifying(true);
-    const phone = normalizeEgyptPhone(verifyPhone || formData.phone);
+    const phone = normalizeEgyptPhone(otpPhone || formData.phone);
     const { error } = await supabase.auth.verifyOtp({
       phone,
       token: otpCode,
@@ -162,6 +238,7 @@ export default function ProfileClient() {
     if (user) await loadWallet(user.id);
     setOtpSent(false);
     setOtpCode("");
+    setOtpPhone("");
     setVerifyMessage("Phone verified! Your welcome credits are active.");
   };
 
@@ -269,47 +346,10 @@ export default function ProfileClient() {
                 <Gift size={18} />
                 Unlock {WELCOME_FREE_ADS} free ads + {WELCOME_BALANCE_EGP} EGP
               </p>
-              <p className="text-sm text-amber-800 mb-4">
-                Verify your phone to activate welcome credits (balance expires in 90 days).
+              <p className="text-sm text-amber-800">
+                Enter your Egyptian mobile below, then send a verification code. SMS goes to that
+                exact number.
               </p>
-              <div className="space-y-3">
-                <input
-                  type="tel"
-                  value={verifyPhone || formData.phone}
-                  onChange={(e) => setVerifyPhone(e.target.value)}
-                  placeholder="01XXXXXXXXX"
-                  className="w-full p-3 border rounded-xl text-sm"
-                />
-                {!otpSent ? (
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={verifying}
-                    className="w-full py-2.5 rounded-xl bg-[#FF6321] text-white font-bold text-sm hover:bg-[#e85a1e] disabled:opacity-60"
-                  >
-                    {verifying ? "Sending…" : "Send verification code"}
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      placeholder="SMS code"
-                      className="flex-1 p-3 border rounded-xl text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleVerifyOtp}
-                      disabled={verifying || otpCode.length < 4}
-                      className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 disabled:opacity-60"
-                    >
-                      Verify
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
@@ -319,10 +359,6 @@ export default function ProfileClient() {
               Balance valid until {new Date(wallet.balance_expires_at).toLocaleDateString()}
               {isBalanceExpired(wallet.balance_expires_at) && " (expired)"}
             </p>
-          )}
-
-          {verifyMessage && (
-            <p className="text-sm mt-3 font-medium text-gray-700">{verifyMessage}</p>
           )}
 
           <p className="text-xs text-gray-400 mt-3">Top-up coming soon — contact support for manual credits.</p>
@@ -350,11 +386,85 @@ export default function ProfileClient() {
             <input
               type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="01XXXXXXXXX"
               className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#FF6321]"
               required
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Saved to your profile and used for SMS verification.
+            </p>
+
+            {!wallet?.phone_verified && (
+              <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
+                {formData.phone.trim() && isValidEgyptPhone(formData.phone) ? (
+                  <p className="text-sm text-gray-700">
+                    SMS will be sent to:{" "}
+                    <span className="font-bold text-gray-900">{formData.phone.trim()}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-amber-800">Enter a valid Egyptian mobile above first.</p>
+                )}
+
+                {!otpSent ? (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={verifying || !isValidEgyptPhone(formData.phone)}
+                    className="w-full py-2.5 rounded-xl bg-[#FF6321] text-white font-bold text-sm hover:bg-[#e85a1e] disabled:opacity-60"
+                  >
+                    {verifying ? "Sending…" : "Send verification code"}
+                  </button>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-500">
+                      Code sent to <span className="font-semibold">{otpPhone}</span>
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="SMS code"
+                        className="flex-1 p-3 border rounded-xl text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={verifying || otpCode.length < 4}
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        Verify
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpSent(false);
+                        setOtpCode("");
+                        setOtpPhone("");
+                        setVerifyMessage(null);
+                      }}
+                      className="text-xs text-gray-500 hover:text-[#FF6321] underline"
+                    >
+                      Change number / resend
+                    </button>
+                  </>
+                )}
+                {verifyMessage && (
+                  <p
+                    className={`text-sm font-medium ${
+                      verifyMessage.includes("verified") || verifyMessage.includes("sent")
+                        ? "text-emerald-700"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {verifyMessage}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
