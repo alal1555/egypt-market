@@ -64,7 +64,7 @@ supabase/             # schema.sql, rls.sql, README.md — database docs
 public/               # Static assets (logo.png full, logo-nav.png navbar)
 ```
 
-No API routes. Schema + RLS in `supabase/`. All auth checks are **client-side** (no middleware).
+No API routes except **wallet top-up** (`/api/wallet/top-up/*` for Paymob). Schema + RLS in `supabase/`. All auth checks are **client-side** (no middleware).
 
 ---
 
@@ -85,6 +85,9 @@ No API routes. Schema + RLS in `supabase/`. All auth checks are **client-side** 
 | `/reset-password` | Set new password from recovery token |
 | `/auth/callback` | Forwards hash to `/reset-password` |
 | `/profile` | View/edit name & phone (client-only, no SSR) |
+| `/wallet/top-up` | Add EGP balance via Paymob |
+| `/wallet/top-up/result` | Payment confirmation page |
+| `/pricing` | Ad posting price list |
 | `/admin/dashboard` | Ad approval + super-admin role management |
 
 ---
@@ -201,7 +204,7 @@ No email verification gate. No OAuth.
 
 ## Pending / Known Gaps
 
-- [x] Wallet: 3 free ads on signup; 300 EGP balance after phone verify (90-day expiry); 40 EGP/ad
+- [x] Wallet: 3 free ads on signup; 300 EGP balance after phone verify (90-day expiry); 40 EGP/ad; 30-day listing live time
 - [ ] Migrate old rent ads with duplicate slugs in Supabase (manual SQL)
 - [x] Dead code cleanup (`src/data/ads.ts`, `vehicleService.ts`, `react-range`)
 - [x] Logo asset (`public/logo.png`)

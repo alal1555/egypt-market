@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Heart, EyeOff, Clock, CheckCircle, MapPin } from "lucide-react"; 
+import { Heart, EyeOff, Clock, CheckCircle, MapPin, CalendarClock } from "lucide-react"; 
 import { supabase } from "@/lib/supabase";
+import { getListingDisplayStatus, type ListingDisplayStatus } from "@/constants/adPricing";
 
 interface AdProps {
   id: string;
@@ -18,12 +19,13 @@ interface AdProps {
   postedDate?: string;
   currentUserId?: string | null; 
   status?: string; 
+  expires_at?: string | null;
   showStatus?: boolean;
 }
 
 export default function AdCard({ 
   id, title, price, location, imageUrl, specs = {}, postedDate,
-  makeName, modelName, currentUserId: propUserId, status = "active", showStatus = false 
+  makeName, modelName, currentUserId: propUserId, status = "active", expires_at, showStatus = false 
 }: AdProps) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -68,26 +70,28 @@ export default function AdCard({
     setLoading(false);
   };
 
-  const statusConfig: Record<string, { label: string, color: string, icon: React.ReactNode }> = {
+  const statusConfig: Record<ListingDisplayStatus, { label: string, color: string, icon: React.ReactNode }> = {
     pending: { label: "Pending", color: "bg-amber-500", icon: <Clock size={11} /> },
     active: { label: "Live", color: "bg-emerald-500", icon: <CheckCircle size={11} /> },
+    expired: { label: "Expired", color: "bg-gray-500", icon: <CalendarClock size={11} /> },
     banned: { label: "Banned", color: "bg-red-600", icon: <EyeOff size={11} /> }
   };
 
+  const displayStatus = showStatus ? getListingDisplayStatus({ status, expires_at }) : null;
+  const isExpiredListing = displayStatus === "expired";
+
   const displayImage = imageUrl || "https://via.placeholder.com/600x400?text=No+Image";
 
-  return (
-    <Link href={`/product/${id}`} className="flex h-full">
-      {/* Added 'flex flex-col h-full' to ensure the card stretches to grid cell height */}
+  const cardInner = (
       <div className="group flex flex-col w-full overflow-hidden rounded-xl bg-white shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 relative">
         
         <button onClick={handleFavoriteClick} disabled={loading} className="absolute top-3 right-3 z-10 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-sm hover:bg-white transition text-gray-500 focus:outline-none">
           <Heart size={18} className={`transition-colors duration-200 ${isFavorited ? "fill-red-500 text-red-500" : "text-gray-600 hover:text-red-500"}`} />
         </button>
 
-        {showStatus && statusConfig[status] && (
-           <div className={`absolute top-3 left-3 z-10 px-2 py-1 rounded text-[10px] font-bold text-white flex items-center gap-1 ${statusConfig[status].color}`}>
-              {statusConfig[status].icon} {statusConfig[status].label}
+        {displayStatus && statusConfig[displayStatus] && (
+           <div className={`absolute top-3 left-3 z-10 px-2 py-1 rounded text-[10px] font-bold text-white flex items-center gap-1 ${statusConfig[displayStatus].color}`}>
+              {statusConfig[displayStatus].icon} {statusConfig[displayStatus].label}
            </div>
         )}
 
@@ -132,6 +136,15 @@ export default function AdCard({
           </div>
         </div>
       </div>
+  );
+
+  if (isExpiredListing) {
+    return <div className="flex h-full opacity-90 cursor-default">{cardInner}</div>;
+  }
+
+  return (
+    <Link href={`/product/${id}`} className="flex h-full">
+      {cardInner}
     </Link>
   );
 }

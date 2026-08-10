@@ -1,11 +1,15 @@
 /** Wallet & ad posting credits — Yaddii Marketplace */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  AD_LIVE_DAYS,
+  AD_POST_PRICE_EGP,
+  BALANCE_EXPIRY_DAYS,
+  WELCOME_BALANCE_EGP,
+  WELCOME_FREE_ADS,
+} from "@/constants/adPricing";
 
-export const WELCOME_FREE_ADS = 3;
-export const WELCOME_BALANCE_EGP = 300;
-export const AD_POST_PRICE_EGP = 40;
-export const BALANCE_EXPIRY_DAYS = 90;
+export { AD_LIVE_DAYS, AD_POST_PRICE_EGP, BALANCE_EXPIRY_DAYS, WELCOME_BALANCE_EGP, WELCOME_FREE_ADS };
 
 export type WalletProfile = {
   free_ads_remaining: number;
@@ -52,6 +56,12 @@ export function formatWalletError(code: string | undefined): string {
       return `You need ${AD_POST_PRICE_EGP} EGP balance or a free ad to post. Top-up coming soon.`;
     case "balance_expired":
       return "Your welcome balance has expired. Top-up coming soon.";
+    case "ad_expiry_migration_required":
+      return "Ad expiry is not set up in Supabase yet. Run supabase/ad-expiry.sql in the SQL Editor.";
+    case "ad_not_active":
+      return "Only live listings can be renewed.";
+    case "not_owner":
+      return "You can only renew your own ads.";
     case "not_authenticated":
       return "Please log in to post an ad.";
     default:
@@ -161,6 +171,36 @@ export async function checkCanPostAd(
   }
 
   return canPostFromProfile(profile as ProfileRow);
+}
+
+export type RenewResult = {
+  ok: boolean;
+  error?: string;
+  expires_at?: string;
+};
+
+export async function renewAdListing(
+  client: SupabaseClient,
+  adId: string
+): Promise<RenewResult> {
+  const { data, error } = await client.rpc("renew_ad", {
+    p_ad_id: adId,
+    p_price: AD_POST_PRICE_EGP,
+    p_live_days: AD_LIVE_DAYS,
+  });
+
+  if (!error && data) {
+    const payload = data as RenewResult & { consume?: ConsumeResult };
+    if (payload.ok) return payload;
+    return { ok: false, error: payload.error };
+  }
+
+  if (error?.message?.includes("function public.renew_ad")) {
+    return { ok: false, error: "ad_expiry_migration_required" };
+  }
+
+  const payload = data as RenewResult | null;
+  return { ok: false, error: payload?.error || error?.message || "renew_failed" };
 }
 
 export async function consumeAdCredit(

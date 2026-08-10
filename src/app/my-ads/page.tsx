@@ -4,8 +4,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
 import Link from "next/link";
-import { Trash2, Edit3, Plus } from "lucide-react"; 
+import { Trash2, Edit3, Plus, RefreshCw, CalendarClock } from "lucide-react"; 
 import { extractSpecs } from "@/lib/utils";
+import {
+  AD_LIVE_DAYS,
+  AD_POST_PRICE_EGP,
+  formatExpiryDate,
+  getListingDisplayStatus,
+} from "@/constants/adPricing";
+import { formatWalletError, renewAdListing } from "@/lib/wallet";
 
 interface Ad {
   id: string;
@@ -17,6 +24,7 @@ interface Ad {
   status: string;
   attributes?: any;
   created_at: string;
+  expires_at?: string | null;
 }
 
 export default function MyAdsPage() {
@@ -24,6 +32,7 @@ export default function MyAdsPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [renewingId, setRenewingId] = useState<string | null>(null);
 
   // Maps for Make and Model name lookup
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
@@ -42,7 +51,7 @@ export default function MyAdsPage() {
       const [adsRes, makesRes, modelsRes] = await Promise.all([
         supabase
           .from("ads")
-          .select("id, title, price, location, category_slug, images, status, attributes, created_at")
+          .select("id, title, price, location, category_slug, images, status, attributes, created_at, expires_at")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase.from("makes").select("id, name"),
@@ -72,6 +81,32 @@ export default function MyAdsPage() {
       setAds((prev) => prev.filter((ad) => ad.id !== adId));
     }
     setDeletingId(null);
+  };
+
+  const handleRenew = async (adId: string) => {
+    if (
+      !window.confirm(
+        `Renew this listing for ${AD_LIVE_DAYS} more days? This uses 1 free ad or ${AD_POST_PRICE_EGP} EGP from your wallet.`,
+      )
+    ) {
+      return;
+    }
+
+    setRenewingId(adId);
+    const result = await renewAdListing(supabase, adId);
+    setRenewingId(null);
+
+    if (!result.ok) {
+      alert(formatWalletError(result.error));
+      return;
+    }
+
+    setAds((prev) =>
+      prev.map((ad) =>
+        ad.id === adId ? { ...ad, expires_at: result.expires_at ?? ad.expires_at } : ad,
+      ),
+    );
+    alert(`Listing renewed — live until ${formatExpiryDate(result.expires_at) ?? "updated date"}.`);
   };
 
   if (loading) return (
@@ -107,23 +142,46 @@ export default function MyAdsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {ads.map((ad) => (
+          {ads.map((ad) => {
+            const listingStatus = getListingDisplayStatus(ad);
+            const expired = listingStatus === "expired";
+
+            return (
             <div key={ad.id} className="border rounded-2xl p-3 bg-white shadow-sm flex flex-col">
               <AdCard 
                 {...ad} 
-                status={ad.status} 
+                status={ad.status}
+                expires_at={ad.expires_at}
                 showStatus={true} 
                 price={String(ad.price)} 
                 category={ad.category_slug} 
                 imageUrl={ad.images?.[0]} 
-                // extractSpecs handles pets and vehicles automatically
                 specs={extractSpecs(ad.attributes)}
-                // Look up names using the IDs stored in attributes
                 makeName={ad.attributes?.make_id ? makesMap[ad.attributes.make_id] : undefined}
                 modelName={ad.attributes?.model_id ? modelsMap[ad.attributes.model_id] : undefined}
               />
+
+              {ad.status === "active" && ad.expires_at && (
+                <p className={`text-xs mt-3 flex items-center gap-1 ${expired ? "text-red-600 font-bold" : "text-gray-500"}`}>
+                  <CalendarClock size={14} />
+                  {expired
+                    ? `Expired on ${formatExpiryDate(ad.expires_at)}`
+                    : `Live until ${formatExpiryDate(ad.expires_at)}`}
+                </p>
+              )}
               
-              <div className="flex gap-2 mt-auto pt-4">
+              <div className="flex flex-col gap-2 mt-auto pt-4">
+                {expired && (
+                  <button
+                    onClick={() => handleRenew(ad.id)}
+                    disabled={renewingId === ad.id}
+                    className="w-full flex items-center justify-center gap-2 bg-[#FF6321] text-white hover:bg-[#e85a1e] py-2 rounded-xl text-sm font-bold transition disabled:opacity-60"
+                  >
+                    <RefreshCw size={16} />
+                    {renewingId === ad.id ? "Renewing…" : `Renew (${AD_POST_PRICE_EGP} EGP)`}
+                  </button>
+                )}
+                <div className="flex gap-2">
                 <Link href={`/my-ads/edit/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 py-2 rounded-xl text-sm font-bold transition">
                   <Edit3 size={16} /> Edit
                 </Link>
@@ -134,9 +192,11 @@ export default function MyAdsPage() {
                 >
                   <Trash2 size={16} /> {deletingId === ad.id ? "..." : "Delete"}
                 </button>
+                </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { computeExpiresAt } from "@/constants/adPricing";
 import { Shield, Trash2, CheckCircle, Users, FileText, UserPlus, UserMinus, Crown, AlertCircle, ChevronDown, ChevronUp, MapPin, Tag, Hourglass, Eye, Ban } from "lucide-react";
 
 interface Ad {
@@ -14,6 +15,7 @@ interface Ad {
   description?: string;
   images?: string[];
   created_at: string;
+  expires_at?: string | null;
 }
 
 interface Profile {
@@ -56,7 +58,7 @@ export default function AdminDashboard() {
 
       const { data: listings } = await supabase
         .from("ads")
-        .select("id, title, price, location, status, description, images, created_at")
+        .select("id, title, price, location, status, description, images, created_at, expires_at")
         .order("created_at", { ascending: false });
 
       const { data: userProfiles } = await supabase
@@ -86,17 +88,24 @@ export default function AdminDashboard() {
 
     const confirmAction = window.confirm(message);
     if (!confirmAction) return;
+
+    const current = ads.find((ad) => ad.id === id);
+    const updates: { status: "active" | "banned"; expires_at?: string } = { status: newStatus };
+
+    if (newStatus === "active" && (!current?.expires_at || current.status === "banned")) {
+      updates.expires_at = computeExpiresAt();
+    }
     
     const { error } = await supabase
       .from("ads")
-      .update({ status: newStatus })
+      .update(updates)
       .eq("id", id);
 
     if (error) {
       alert(`Database Rejection Error:\n\nMessage: ${error.message}`);
     } else {
       setAds((prev) =>
-        prev.map((ad) => (ad.id === id ? { ...ad, status: newStatus } : ad))
+        prev.map((ad) => (ad.id === id ? { ...ad, ...updates } : ad))
       );
       setExpandedAdId(null);
     }
@@ -322,6 +331,12 @@ export default function AdminDashboard() {
                                     <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
                                       <Tag size={12} className="text-orange-500" /> {ad.price} EGP
                                     </span>
+                                    {ad.expires_at && ad.status === "active" && (
+                                      <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
+                                        <Hourglass size={12} className="text-gray-400" />
+                                        Live until {new Date(ad.expires_at).toLocaleDateString()}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
 

@@ -36,11 +36,14 @@ create policy "profiles_update_super"
 -- ---------------------------------------------------------------------------
 -- ads
 -- ---------------------------------------------------------------------------
--- Public marketplace: active ads visible to everyone (including anon)
+-- Public marketplace: active, non-expired ads visible to everyone (including anon)
 create policy "ads_select_active"
   on public.ads for select
   to anon, authenticated
-  using (status = 'active');
+  using (
+    status = 'active'
+    and (expires_at is null or expires_at > now())
+  );
 
 -- Sellers see all their own ads (pending, active, banned)
 create policy "ads_select_own"

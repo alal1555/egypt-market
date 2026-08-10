@@ -24,6 +24,8 @@ In **Supabase Dashboard → SQL Editor**, run in order:
 1. [`schema.sql`](./schema.sql) — tables, indexes, signup trigger, helper functions
 2. [`rls.sql`](./rls.sql) — row level security policies
 3. [`wallet.sql`](./wallet.sql) — wallet columns, transactions, credit functions
+4. [`ad-expiry.sql`](./ad-expiry.sql) — listing `expires_at`, 30-day visibility, `renew_ad` RPC
+5. [`top-up.sql`](./top-up.sql) — Paymob wallet top-up + `apply_top_up` RPC
 
 If tables already exist, compare columns and add missing ones manually instead of re-running `create table`.
 
@@ -169,7 +171,57 @@ select public.grant_welcome_credits('USER_UUID');
 
 Function logs: `supabase functions logs send-sms`
 
-### 6. First super admin
+### 6. Wallet top-up (Paymob)
+
+Users add EGP balance at **`/wallet/top-up`** (phone verified required). Payments run through [Paymob Accept](https://developers.paymob.com/egypt/getting-started-egypt).
+
+#### A. Paymob dashboard
+
+1. Create a Paymob Accept account and get your **API Key**
+2. Create an **Integration** (card / wallet) → note **Integration ID**
+3. Create an **iFrame** linked to that integration → note **iFrame ID**
+4. **Settings → Account → HMAC** → copy **HMAC secret** for transaction processed callback
+
+#### B. Supabase
+
+Run [`top-up.sql`](./top-up.sql) after `wallet.sql` (creates `wallet_top_ups`, `apply_top_up` RPC).
+
+#### C. App environment (`.env.local`)
+
+```bash
+# Existing Supabase
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...   # server only — never expose to client
+
+# Paymob (server only except site URL)
+PAYMOB_API_KEY=...
+PAYMOB_INTEGRATION_ID=...
+PAYMOB_IFRAME_ID=...
+PAYMOB_HMAC_SECRET=...
+
+# Production site (webhook redirect URLs)
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
+```
+
+#### D. Paymob webhook URL
+
+In Paymob dashboard, set **Transaction processed callback** to:
+
+```
+https://your-domain.com/api/wallet/top-up/webhook
+```
+
+For local testing use [ngrok](https://ngrok.com/) and point the callback to your tunnel URL.
+
+#### E. Flow
+
+1. User picks amount (100 / 200 / 500 / 1000 EGP) → `POST /api/wallet/top-up/create`
+2. Paymob iFrame collects payment
+3. Paymob POSTs to webhook → `apply_top_up()` credits `profiles.balance`
+4. User lands on `/wallet/top-up/result` and sees updated balance
+
+### 7. First super admin
 
 After your first account signs up, promote yourself in SQL Editor:
 
@@ -210,7 +262,7 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 | `description` | text | |
 | `created_at` | timestamptz | |
 
-**Ad posting:** 3 free ads on signup; 40 EGP per ad from wallet balance after that. Phone verify required for balance. RPC: `can_post_ad`, `consume_ad_credit`, `grant_welcome_credits`.
+**Ad posting:** 3 free ads on signup; 40 EGP per ad from wallet balance after that. Phone verify required for balance. Each approved listing stays live **30 days** (`expires_at`); renew via `renew_ad`. RPC: `can_post_ad`, `consume_ad_credit`, `grant_welcome_credits`, `renew_ad`.
 
 Auto-created on signup via `handle_new_user()` trigger.
 
@@ -230,6 +282,7 @@ Auto-created on signup via `handle_new_user()` trigger.
 | `seller_phone` | text | call / WhatsApp |
 | `status` | text | `pending` \| `active` \| `banned` |
 | `created_at` | timestamptz | auto |
+| `expires_at` | timestamptz | Public visibility end (30 days after approval) |
 
 **App flow:** new/edited ads → `pending` → admin sets `active` or `banned`.
 
@@ -343,6 +396,8 @@ where (attributes->>'year') ~ '^[0-9]+$';
 | `schema.sql` | Tables, indexes, triggers, helper functions |
 | `rls.sql` | Row Level Security policies |
 | `wallet.sql` | Wallet columns, RPCs, transactions |
+| `ad-expiry.sql` | Listing expiry + renew RPC |
+| `top-up.sql` | Paymob wallet top-up |
 | `seed-vehicles.sql` | Vehicle makes/models seed |
 | `functions/send-sms/` | Auth Send SMS hook → SMS Misr OTP |
 | `config.toml` | Edge Function config (`verify_jwt = false` for hook) |

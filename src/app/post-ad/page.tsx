@@ -193,7 +193,10 @@ export default function PostAdPage() {
       <h1 className="text-3xl font-bold text-gray-800 mb-4 text-center">Post Your Ad</h1>
       <p className="text-center text-sm text-gray-500 mb-6">
         Standard ad: {AD_POST_PRICE_EGP} EGP · New users get {WELCOME_FREE_ADS} free ads · Verify
-        phone for {WELCOME_BALANCE_EGP} EGP wallet balance
+        phone for {WELCOME_BALANCE_EGP} EGP wallet balance ·{" "}
+        <Link href="/pricing" className="text-[#FF6321] font-bold hover:underline">
+          Full price list
+        </Link>
       </p>
 
       {renderCreditBanner()}

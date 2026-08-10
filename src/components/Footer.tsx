@@ -69,6 +69,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/pricing" className="text-sm text-gray-600 hover:text-[#FF6321] transition-colors">
+                  Ad pricing
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="text-sm text-gray-600 hover:text-[#FF6321] transition-colors">
                   About
                 </Link>
@@ -95,6 +100,10 @@ export default function Footer() {
 
       <div className="md:hidden px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] border-t border-gray-100 text-center text-[11px] text-gray-400">
         <span>© {year} Yaddii</span>
+        <span className="mx-2">·</span>
+        <Link href="/pricing" className="hover:text-[#FF6321]">
+          Pricing
+        </Link>
         <span className="mx-2">·</span>
         <Link href="/about" className="hover:text-[#FF6321]">
           About
