@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Phone, MessageCircle, MapPin } from "lucide-react";
 import AdCard from "@/components/AdCard";
-import { extractSpecs, formatPhoneForLink } from "@/lib/utils";
+import { extractSpecs, formatPhoneForLink, cleanAdAttributes } from "@/lib/utils";
 
 export default function ProductPage() {
   const params = useParams();
@@ -87,11 +87,11 @@ export default function ProductPage() {
               <h2 className="text-2xl font-bold">Description</h2>
               <p className="text-gray-600 whitespace-pre-wrap">{ad.description}</p>
               
-              {ad.attributes && Object.keys(ad.attributes).length > 0 && (
+              {ad.attributes && Object.keys(cleanAdAttributes(ad.attributes)).length > 0 && (
                 <div className="border-t pt-6">
                     <h3 className="font-bold text-gray-900 mb-4">Specifications</h3>
                     <div className="grid grid-cols-2 gap-4">
-                        {Object.entries(ad.attributes).map(([key, value]) => {
+                        {Object.entries(cleanAdAttributes(ad.attributes)).map(([key, value]) => {
                           const { label, val } = getAttributeDisplay(key, value);
                           return (
                             <div key={key} className="bg-gray-50 p-3 rounded-lg">

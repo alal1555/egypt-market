@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { X, Upload } from "lucide-react";
 import DynamicAttributes from "@/components/DynamicAttributes";
+import { cleanAdAttributes } from "@/lib/utils";
 
 interface EditAdProps {
   params: Promise<{ id: string }>;
@@ -102,7 +103,7 @@ export default function EditAdPage({ params }: EditAdProps) {
           price: Number(formData.price),
           location: formData.location,
           description: formData.description,
-          attributes: formData.attributes,
+          attributes: cleanAdAttributes(formData.attributes),
           seller_phone: formData.seller_phone,
           images: [...existingImages, ...uploadedUrls],
           status: "pending",

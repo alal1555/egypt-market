@@ -50,6 +50,18 @@ export const extractSpecs = (attributes: any) => {
   return attributes;
 };
 
+/** Drop empty attribute values before save/display (avoids stray make_id on non-vehicle ads). */
+export function cleanAdAttributes(attributes: Record<string, unknown> | null | undefined) {
+  if (!attributes || typeof attributes !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(attributes).filter(([, value]) => {
+      if (value === null || value === undefined) return false;
+      if (typeof value === "string" && value.trim() === "") return false;
+      return true;
+    }),
+  );
+};
+
 // npx next dev -H 0.0.0.0
 
 

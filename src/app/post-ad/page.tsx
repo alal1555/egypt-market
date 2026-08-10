@@ -15,6 +15,7 @@ import {
   consumeAdCredit,
   formatWalletError,
 } from "@/lib/wallet";
+import { cleanAdAttributes } from "@/lib/utils";
 
 export default function PostAdPage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function PostAdPage() {
     price: 0,
     location: "",
     description: "",
-    attributes: { make_id: "" },
+    attributes: {} as Record<string, string>,
   });
 
   const subCategories = useMemo(() => {
@@ -114,7 +115,7 @@ export default function PostAdPage() {
           location: formData.location,
           description: formData.description,
           category_slug: category,
-          attributes: formData.attributes,
+          attributes: cleanAdAttributes(formData.attributes),
           images: uploadedUrls,
           seller_phone: sellerPhone,
           status: "pending",
@@ -223,7 +224,10 @@ export default function PostAdPage() {
             <select
               value={category}
               disabled={!mainCategory}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setFormData((prev) => ({ ...prev, attributes: {} }));
+              }}
               className="w-full p-4 border rounded-lg bg-white"
             >
               <option value="">Select Sub-category</option>
