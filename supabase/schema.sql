@@ -86,8 +86,8 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, role)
-  values (new.id, 'user')
+  insert into public.profiles (id, role, free_ads_remaining)
+  values (new.id, 'user', 3)
   on conflict (id) do nothing;
   return new;
 end;

@@ -12,7 +12,7 @@ Classifieds marketplace for Egypt — buy and sell vehicles, properties, pets, e
 - Browse and search listings with category-specific filters
 - Post ads with photos, dynamic attributes, and seller phone (call / WhatsApp)
 - User auth — signup, login, password reset, profile
-- **Wallet** — 3 free ads + 300 EGP after phone verify; 40 EGP per ad after that
+- **Wallet** — 3 free ads on signup; 300 EGP wallet balance after phone verify; 40 EGP per ad after that
 - Favorites, my ads, edit listings (re-approval flow)
 - Admin dashboard — approve, ban, and manage user roles
 - Mobile-first layout with bottom nav and filter bottom sheet

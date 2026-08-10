@@ -239,7 +239,7 @@ export default function ProfileClient() {
     setOtpSent(false);
     setOtpCode("");
     setOtpPhone("");
-    setVerifyMessage("Phone verified! Your welcome credits are active.");
+    setVerifyMessage("Phone verified! 300 EGP added to your wallet balance.");
   };
 
   if (loading) {
@@ -319,37 +319,132 @@ export default function ProfileClient() {
             Ad Credits & Balance
           </h2>
 
-          {wallet?.phone_verified ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-                <p className="text-xs font-bold text-gray-500 uppercase">Free ads</p>
-                <p className="text-2xl font-black text-[#FF6321]">{wallet.free_ads_remaining}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-                <p className="text-xs font-bold text-gray-500 uppercase">Balance</p>
-                <p className="text-2xl font-black text-[#FF6321]">{wallet.balance} EGP</p>
-              </div>
-              <div className="p-4 rounded-xl bg-gray-50 border">
-                <p className="text-xs font-bold text-gray-500 uppercase">Paid ads left</p>
-                <p className="text-2xl font-black text-gray-800">
-                  {adsRemainingFromBalance(
-                    wallet.balance,
-                    isBalanceExpired(wallet.balance_expires_at)
-                  )}
-                </p>
-                <p className="text-[10px] text-gray-400 mt-1">{AD_POST_PRICE_EGP} EGP per ad</p>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+              <p className="text-xs font-bold text-gray-500 uppercase">Free ads</p>
+              <p className="text-2xl font-black text-[#FF6321]">{wallet?.free_ads_remaining ?? 0}</p>
+              {!wallet?.phone_verified && (
+                <p className="text-[10px] text-gray-400 mt-1">Starter pack for new users</p>
+              )}
             </div>
-          ) : (
+            {wallet?.phone_verified ? (
+              <>
+                <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                  <p className="text-xs font-bold text-gray-500 uppercase">Wallet balance</p>
+                  <p className="text-2xl font-black text-[#FF6321]">{wallet.balance} EGP</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50 border">
+                  <p className="text-xs font-bold text-gray-500 uppercase">Paid ads left</p>
+                  <p className="text-2xl font-black text-gray-800">
+                    {adsRemainingFromBalance(
+                      wallet.balance,
+                      isBalanceExpired(wallet.balance_expires_at)
+                    )}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-1">{AD_POST_PRICE_EGP} EGP per ad</p>
+                </div>
+              </>
+            ) : (
+              <div className="p-4 rounded-xl bg-gray-50 border sm:col-span-2">
+                <p className="text-xs font-bold text-gray-500 uppercase">Wallet balance</p>
+                <p className="text-lg font-black text-gray-700 mt-1">
+                  Verify phone to unlock {WELCOME_BALANCE_EGP} EGP
+                </p>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {AD_POST_PRICE_EGP} EGP per ad after free ads are used
+                </p>
+              </div>
+            )}
+          </div>
+
+          {!wallet?.phone_verified && (
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
               <p className="flex items-center gap-2 font-bold text-amber-900 mb-2">
                 <Gift size={18} />
-                Unlock {WELCOME_FREE_ADS} free ads + {WELCOME_BALANCE_EGP} EGP
+                Unlock {WELCOME_BALANCE_EGP} EGP wallet balance
               </p>
-              <p className="text-sm text-amber-800">
-                Enter your Egyptian mobile below, then send a verification code. SMS goes to that
-                exact number.
+              <p className="text-sm text-amber-800 mb-4">
+                You already have {WELCOME_FREE_ADS} free ads to get started. Verify your Egyptian
+                mobile below to add {WELCOME_BALANCE_EGP} EGP to your wallet (valid 90 days).
               </p>
+              <div className="space-y-3">
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full p-3 border rounded-xl text-sm bg-white"
+                />
+                {formData.phone.trim() && isValidEgyptPhone(formData.phone) ? (
+                  <p className="text-sm text-amber-900">
+                    SMS will be sent to:{" "}
+                    <span className="font-bold">{formData.phone.trim()}</span>
+                  </p>
+                ) : formData.phone.trim() ? (
+                  <p className="text-sm text-red-600">
+                    Enter a valid Egyptian mobile (e.g. 01012345678).
+                  </p>
+                ) : null}
+
+                {!otpSent ? (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={verifying || !isValidEgyptPhone(formData.phone)}
+                    className="w-full py-2.5 rounded-xl bg-[#FF6321] text-white font-bold text-sm hover:bg-[#e85a1e] disabled:opacity-60"
+                  >
+                    {verifying ? "Sending…" : "Send verification code"}
+                  </button>
+                ) : (
+                  <>
+                    <p className="text-xs text-amber-800">
+                      Code sent to <span className="font-semibold">{otpPhone}</span>
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="SMS code"
+                        className="flex-1 p-3 border rounded-xl text-sm bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={verifying || otpCode.length < 4}
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        Verify
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpSent(false);
+                        setOtpCode("");
+                        setOtpPhone("");
+                        setVerifyMessage(null);
+                      }}
+                      className="text-xs text-amber-700 hover:text-[#FF6321] underline"
+                    >
+                      Change number / resend
+                    </button>
+                  </>
+                )}
+
+                {verifyMessage && (
+                  <p
+                    className={`text-sm font-medium ${
+                      verifyMessage.includes("verified") || verifyMessage.includes("sent")
+                        ? "text-emerald-700"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {verifyMessage}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -383,87 +478,20 @@ export default function ProfileClient() {
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
               <Phone size={16} /> Phone Number
             </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handlePhoneChange(e.target.value)}
-              placeholder="01XXXXXXXXX"
-              className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#FF6321]"
-              required
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Saved to your profile and used for SMS verification.
-            </p>
-
-            {!wallet?.phone_verified && (
-              <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
-                {formData.phone.trim() && isValidEgyptPhone(formData.phone) ? (
-                  <p className="text-sm text-gray-700">
-                    SMS will be sent to:{" "}
-                    <span className="font-bold text-gray-900">{formData.phone.trim()}</span>
-                  </p>
-                ) : (
-                  <p className="text-sm text-amber-800">Enter a valid Egyptian mobile above first.</p>
-                )}
-
-                {!otpSent ? (
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={verifying || !isValidEgyptPhone(formData.phone)}
-                    className="w-full py-2.5 rounded-xl bg-[#FF6321] text-white font-bold text-sm hover:bg-[#e85a1e] disabled:opacity-60"
-                  >
-                    {verifying ? "Sending…" : "Send verification code"}
-                  </button>
-                ) : (
-                  <>
-                    <p className="text-xs text-gray-500">
-                      Code sent to <span className="font-semibold">{otpPhone}</span>
-                    </p>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value)}
-                        placeholder="SMS code"
-                        className="flex-1 p-3 border rounded-xl text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleVerifyOtp}
-                        disabled={verifying || otpCode.length < 4}
-                        className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 disabled:opacity-60"
-                      >
-                        Verify
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtpSent(false);
-                        setOtpCode("");
-                        setOtpPhone("");
-                        setVerifyMessage(null);
-                      }}
-                      className="text-xs text-gray-500 hover:text-[#FF6321] underline"
-                    >
-                      Change number / resend
-                    </button>
-                  </>
-                )}
-                {verifyMessage && (
-                  <p
-                    className={`text-sm font-medium ${
-                      verifyMessage.includes("verified") || verifyMessage.includes("sent")
-                        ? "text-emerald-700"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {verifyMessage}
-                  </p>
-                )}
-              </div>
+            {wallet?.phone_verified ? (
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                placeholder="01XXXXXXXXX"
+                className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#FF6321]"
+                required
+              />
+            ) : (
+              <p className="text-sm text-gray-500 p-3 border border-gray-100 rounded-xl bg-gray-50">
+                Verify your phone above to unlock wallet balance. Your number will appear here after
+                verification.
+              </p>
             )}
           </div>
 

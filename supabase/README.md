@@ -80,7 +80,9 @@ The app sends OTP from **Profile → Ad Credits** via Supabase Auth. Supabase ge
 1. User clicks **Send verification code** → `updateUser({ phone })`
 2. Supabase triggers **Send SMS hook** → Edge Function → SMS Misr OTP API
 3. User enters code → `verifyOtp({ type: "phone_change" })`
-4. `grant_welcome_credits()` → 3 free ads + 300 EGP
+4. `grant_welcome_credits()` → 300 EGP wallet balance (90-day expiry)
+
+New users get **3 free ads on signup**; phone verification unlocks the **300 EGP** balance only.
 
 #### A. SMS Misr console (you)
 
@@ -189,11 +191,11 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 |--------|------|-------|
 | `id` | uuid PK | FK → `auth.users.id` |
 | `role` | text | `user` \| `admin` \| `super` |
-| `free_ads_remaining` | int | Welcome + unused free ad slots |
-| `balance` | numeric | EGP wallet balance |
+| `free_ads_remaining` | int | Starter free ad slots (3 on signup) |
+| `balance` | numeric | Wallet balance in EGP |
 | `balance_expires_at` | timestamptz | Welcome balance expiry (90 days) |
-| `phone_verified` | boolean | Required before posting |
-| `welcome_credits_granted` | boolean | One-time welcome bundle |
+| `phone_verified` | boolean | Required to spend wallet balance |
+| `welcome_credits_granted` | boolean | One-time 300 EGP welcome balance |
 | `created_at` | timestamptz | auto |
 
 ### `wallet_transactions`
@@ -208,7 +210,7 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 | `description` | text | |
 | `created_at` | timestamptz | |
 
-**Ad posting:** 40 EGP per ad after free ads used. RPC: `can_post_ad`, `consume_ad_credit`, `grant_welcome_credits`.
+**Ad posting:** 3 free ads on signup; 40 EGP per ad from wallet balance after that. Phone verify required for balance. RPC: `can_post_ad`, `consume_ad_credit`, `grant_welcome_credits`.
 
 Auto-created on signup via `handle_new_user()` trigger.
 

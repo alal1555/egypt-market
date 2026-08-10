@@ -58,7 +58,33 @@ create policy "wallet_transactions_select_own"
 -- Inserts only via security definer functions (no client insert policy)
 
 -- ---------------------------------------------------------------------------
--- Grant welcome bundle after phone verification (3 free ads + 300 EGP, 90 days)
+-- Signup: grant 3 free ads to new users (balance comes after phone verify)
+-- ---------------------------------------------------------------------------
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, role, free_ads_remaining)
+  values (new.id, 'user', 3)
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Backfill: starter free ads for existing users who have none yet
+-- ---------------------------------------------------------------------------
+update public.profiles
+set free_ads_remaining = 3
+where free_ads_remaining = 0
+  and not welcome_credits_granted;
+
+-- ---------------------------------------------------------------------------
+-- Grant 300 EGP wallet balance after phone verification (90-day expiry)
+-- Free ads (3) are granted on signup — see handle_new_user() in schema.sql
 -- ---------------------------------------------------------------------------
 create or replace function public.grant_welcome_credits(p_user_id uuid default auth.uid())
 returns jsonb
@@ -80,24 +106,33 @@ begin
   end if;
 
   if v_profile.welcome_credits_granted then
-    return jsonb_build_object('ok', true, 'already_granted', true);
+    update public.profiles
+    set phone_verified = true
+    where id = p_user_id and not phone_verified;
+
+    return jsonb_build_object(
+      'ok', true,
+      'already_granted', true,
+      'free_ads_remaining', v_profile.free_ads_remaining,
+      'balance', v_profile.balance,
+      'balance_expires_at', v_profile.balance_expires_at
+    );
   end if;
 
   update public.profiles
   set
     phone_verified = true,
     welcome_credits_granted = true,
-    free_ads_remaining = 3,
     balance = 300,
     balance_expires_at = now() + interval '90 days'
   where id = p_user_id;
 
   insert into public.wallet_transactions (user_id, amount, type, description)
-  values (p_user_id, 300, 'welcome_grant', 'Welcome bonus: 3 free ads + 300 EGP (90-day balance)');
+  values (p_user_id, 300, 'welcome_grant', 'Welcome bonus: 300 EGP wallet balance (90-day expiry)');
 
   return jsonb_build_object(
     'ok', true,
-    'free_ads_remaining', 3,
+    'free_ads_remaining', v_profile.free_ads_remaining,
     'balance', 300,
     'balance_expires_at', (now() + interval '90 days')
   );
@@ -136,10 +171,6 @@ begin
     return jsonb_build_object('ok', true, 'type', 'admin_waiver');
   end if;
 
-  if not v_profile.phone_verified then
-    return jsonb_build_object('ok', false, 'error', 'phone_not_verified');
-  end if;
-
   if v_profile.free_ads_remaining > 0 then
     update public.profiles
     set free_ads_remaining = free_ads_remaining - 1
@@ -153,6 +184,10 @@ begin
       'type', 'free_ad',
       'free_ads_remaining', v_profile.free_ads_remaining - 1
     );
+  end if;
+
+  if not v_profile.phone_verified then
+    return jsonb_build_object('ok', false, 'error', 'phone_not_verified');
   end if;
 
   v_balance_ok := v_profile.balance_expires_at is not null
@@ -211,15 +246,21 @@ begin
     return jsonb_build_object('ok', true, 'type', 'admin_waiver');
   end if;
 
-  if not v_profile.phone_verified then
-    return jsonb_build_object('ok', false, 'error', 'phone_not_verified');
-  end if;
-
   if v_profile.free_ads_remaining > 0 then
     return jsonb_build_object(
       'ok', true,
       'type', 'free_ad',
       'free_ads_remaining', v_profile.free_ads_remaining,
+      'balance', v_profile.balance,
+      'phone_verified', v_profile.phone_verified
+    );
+  end if;
+
+  if not v_profile.phone_verified then
+    return jsonb_build_object(
+      'ok', false,
+      'error', 'phone_not_verified',
+      'free_ads_remaining', 0,
       'balance', v_profile.balance
     );
   end if;

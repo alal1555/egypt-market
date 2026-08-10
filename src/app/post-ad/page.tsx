@@ -9,6 +9,8 @@ import { CATEGORY_CONFIG, getCategoryGroups } from "@/constants/categoryConfig";
 import {
   AD_POST_PRICE_EGP,
   CanPostResult,
+  WELCOME_BALANCE_EGP,
+  WELCOME_FREE_ADS,
   checkCanPostAd,
   consumeAdCredit,
   formatWalletError,
@@ -153,7 +155,7 @@ export default function PostAdPage() {
           <p>{formatWalletError(postCheck?.error)}</p>
           {postCheck?.error === "phone_not_verified" && (
             <Link href="/profile" className="inline-block mt-2 font-bold text-[#FF6321] underline">
-              Verify phone on Profile →
+              Verify phone to unlock wallet balance →
             </Link>
           )}
         </div>
@@ -189,7 +191,8 @@ export default function PostAdPage() {
     <div className="max-w-3xl mx-auto p-8 bg-white shadow-xl rounded-2xl my-10 border border-gray-100">
       <h1 className="text-3xl font-bold text-gray-800 mb-4 text-center">Post Your Ad</h1>
       <p className="text-center text-sm text-gray-500 mb-6">
-        Standard ad: {AD_POST_PRICE_EGP} EGP · New users get 3 free ads + 300 EGP after phone verification
+        Standard ad: {AD_POST_PRICE_EGP} EGP · New users get {WELCOME_FREE_ADS} free ads · Verify
+        phone for {WELCOME_BALANCE_EGP} EGP wallet balance
       </p>
 
       {renderCreditBanner()}
