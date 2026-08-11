@@ -18,7 +18,7 @@ export const ar = {
     tagline: "اشتري وبيع سيارات وعقارات وإلكترونيات والمزيد في جميع أنحاء مصر.",
     browse: "تصفح",
     more: "المزيد",
-    yaddii: "يادي",
+    yaddii: "يدي",
     searchListings: "بحث الإعلانات",
     postAnAd: "أضف إعلان",
     logIn: "تسجيل الدخول",
@@ -27,9 +27,9 @@ export const ar = {
     terms: "شروط الاستخدام",
     privacy: "سياسة الخصوصية",
     pricing: "الأسعار",
-    rights: "© {year} يادي. جميع الحقوق محفوظة.",
+    rights: "© {year} يدي. جميع الحقوق محفوظة.",
     madeFor: "صُنع لمصر 🇪🇬",
-    mobileRights: "© {year} يادي",
+    mobileRights: "© {year} يدي",
   },
   home: {
     heroPrefix: "اعثر على كل شيء في",
@@ -47,8 +47,8 @@ export const ar = {
     postAd: "أضف إعلان",
   },
   auth: {
-    loginTitle: "تسجيل الدخول إلى يادي",
-    signupTitle: "إنشاء حساب يادي",
+    loginTitle: "تسجيل الدخول إلى يدي",
+    signupTitle: "إنشاء حساب يدي",
     fullName: "الاسم الكامل",
     email: "البريد الإلكتروني",
     password: "كلمة المرور",
@@ -95,7 +95,7 @@ export const ar = {
   },
   pricing: {
     title: "أسعار الإعلانات",
-    subtitle: "أسعار بسيطة وشفافة للنشر على يادي",
+    subtitle: "أسعار بسيطة وشفافة للنشر على يدي",
   },
   common: {
     loading: "جاري التحميل...",
