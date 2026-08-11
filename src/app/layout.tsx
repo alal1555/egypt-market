@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Cairo } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import Footer from "@/components/Footer";
+import Providers from "@/components/Providers";
+import { LOCALE_STORAGE_KEY } from "@/i18n/types";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,6 +15,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const cairo = Cairo({
+  variable: "--font-cairo",
+  subsets: ["arabic", "latin"],
+  weight: ["400", "600", "700", "900"],
 });
 
 export const metadata: Metadata = {
@@ -32,12 +40,22 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased m-0 p-0`}
+      dir="ltr"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} antialiased m-0 p-0`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var l=localStorage.getItem("${LOCALE_STORAGE_KEY}");if(l==="ar"){document.documentElement.lang="ar";document.documentElement.dir="rtl";}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body 
         className="bg-gray-50 text-gray-900 m-0 p-0" 
         style={{ backgroundColor: '#f9fafb', colorScheme: 'light' }}
 >
+        <Providers>
         {/* Fixed Top Header Layout */}
         <Navbar />
         
@@ -54,6 +72,7 @@ export default function RootLayout({
         </div>
         {/* Fixed Mobile Bottom Navigation */}
         <BottomNav /> 
+        </Providers>
       </body>
     </html>
   );

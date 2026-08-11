@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Car, Building2, Smartphone, Shirt, Briefcase, LayoutGrid, Dog, Anchor, GraduationCap, ChevronDown, Sofa, Wrench, Baby, Dumbbell, BookOpen, UtensilsCrossed, Factory } from "lucide-react";
 import { CATEGORY_CONFIG } from "@/constants/categoryConfig";
+import { useTranslation } from "@/i18n/LocaleProvider";
+import { localizedMainCategoryName, localizedSubCategoryName } from "@/i18n/catalog";
 
 const getIconForCategory = (slug: string) => {
   const icons: Record<string, any> = {
@@ -17,6 +19,7 @@ const getIconForCategory = (slug: string) => {
 
 export default function CategoryBar({ onSelect }: { onSelect: (main: string, sub: string) => void }) {
   const [openDropdown, setOpenDropdown] = useState<{slug: string, rect: DOMRect} | null>(null);
+  const { locale } = useTranslation();
   const dropdownWidth = 192;
 
   useEffect(() => {
@@ -60,7 +63,7 @@ export default function CategoryBar({ onSelect }: { onSelect: (main: string, sub
                     <Icon size={20} className={isSelected ? "text-[#FF6321]" : "text-gray-600"} />
                   </div>
                   <span className="text-[11px] font-bold flex items-center gap-0.5 text-gray-500 whitespace-nowrap">
-                    {cat.name} <ChevronDown size={10} />
+                    {localizedMainCategoryName(cat.slug, locale)} <ChevronDown size={10} />
                   </span>
                 </button>
               </div>
@@ -83,7 +86,7 @@ export default function CategoryBar({ onSelect }: { onSelect: (main: string, sub
               onClick={() => { onSelect(openDropdown.slug, sub.slug); setOpenDropdown(null); }}
               className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-orange-50 hover:text-[#FF6321]"
             >
-              {sub.name}
+              {localizedSubCategoryName(sub.slug, locale)}
             </button>
           ))}
         </div>

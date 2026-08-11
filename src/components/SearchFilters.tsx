@@ -3,6 +3,13 @@
 import { SlidersHorizontal } from "lucide-react";
 import { CATEGORY_CONFIG } from "@/constants/categoryConfig";
 import { sortWithOtherLast } from "@/lib/utils";
+import { useTranslation } from "@/i18n/LocaleProvider";
+import {
+  localizedAttributeLabel,
+  localizedMainCategoryName,
+  localizedOption,
+  localizedSubCategoryName,
+} from "@/i18n/catalog";
 
 type Make = { id: number; name: string };
 type Model = { id: number; name: string; make_id: number };
@@ -36,6 +43,8 @@ export default function SearchFilters({
   showAttributes = true,
   className = "",
 }: SearchFiltersProps) {
+  const { t, locale } = useTranslation();
+
   return (
     <div className={className}>
       {showCategories && (
@@ -45,9 +54,9 @@ export default function SearchFilters({
             onChange={(e) => updateURL({ main_cat: e.target.value, sub_cat: null, q: null })}
             className="p-3 bg-gray-50 rounded-xl border text-sm"
           >
-            <option value="">All Categories</option>
+            <option value="">{t("search.allCategories")}</option>
             {CATEGORY_CONFIG.map((c) => (
-              <option key={c.slug} value={c.slug}>{c.name}</option>
+              <option key={c.slug} value={c.slug}>{localizedMainCategoryName(c.slug, locale)}</option>
             ))}
           </select>
           <select
@@ -56,9 +65,9 @@ export default function SearchFilters({
             onChange={(e) => updateURL({ sub_cat: e.target.value, q: null })}
             className="p-3 bg-gray-50 rounded-xl border text-sm disabled:opacity-50"
           >
-            <option value="">All Sub-Categories</option>
+            <option value="">{t("search.allSubCategories")}</option>
             {selectedMainCategoryObj?.subs.map((s) => (
-              <option key={s.slug} value={s.slug}>{s.name}</option>
+              <option key={s.slug} value={s.slug}>{localizedSubCategoryName(s.slug, locale)}</option>
             ))}
           </select>
         </div>
@@ -66,19 +75,19 @@ export default function SearchFilters({
 
       {showAttributes && subCategoryAttributes.length > 0 && (
         <h3 className="font-bold mb-4 flex items-center gap-2 text-gray-800">
-          <SlidersHorizontal size={16} /> Filters
+          <SlidersHorizontal size={16} /> {t("search.filters")}
         </h3>
       )}
 
       {showAttributes && subCategoryAttributes.map((field) => (
         <div key={field.key} className="mb-6">
-          <p className="text-xs font-black uppercase text-gray-400 mb-2">{field.label}</p>
+          <p className="text-xs font-black uppercase text-gray-400 mb-2">{localizedAttributeLabel(field.label, locale)}</p>
 
           {field.type === "range" || field.type === "number" ? (
             <div className="flex gap-2 items-center">
               <input
                 type="number"
-                placeholder="Min"
+                placeholder={t("search.min")}
                 className="w-full p-2 border rounded-lg text-sm"
                 value={activeAttrs[field.key]?.[0]?.split("-")[0] || ""}
                 onChange={(e) => {
@@ -89,7 +98,7 @@ export default function SearchFilters({
               <span className="text-gray-400">—</span>
               <input
                 type="number"
-                placeholder="Max"
+                placeholder={t("search.max")}
                 className="w-full p-2 border rounded-lg text-sm"
                 value={activeAttrs[field.key]?.[0]?.split("-")[1] || ""}
                 onChange={(e) => {
@@ -111,7 +120,7 @@ export default function SearchFilters({
                   })
                 }
               />
-              Yes
+              {t("common.yes")}
             </label>
           ) : null}
 
@@ -181,7 +190,7 @@ export default function SearchFilters({
                       updateURL({ [field.key]: next.length > 0 ? next.join(",") : null });
                     }}
                   />
-                  {opt}
+                  {localizedOption(opt, locale)}
                 </label>
               ))}
             </div>
@@ -190,7 +199,7 @@ export default function SearchFilters({
       ))}
 
       {!subCatFilter && showCategories && showAttributes && (
-        <p className="text-sm text-gray-400">Select a sub-category to see attribute filters.</p>
+        <p className="text-sm text-gray-400">{t("search.selectSubForFilters")}</p>
       )}
     </div>
   );

@@ -5,11 +5,13 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Compass, Heart, LayoutGrid, PlusCircle, Shield, Crown } from "lucide-react";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 export default function BottomNav() {
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchUserRole = async (userId: string) => {
@@ -55,7 +57,7 @@ export default function BottomNav() {
         }`}
       >
         <Compass size={20} strokeWidth={isActive("/search") ? 2.5 : 2} />
-        <span className="text-[10px] font-bold mt-0.5">Explore</span>
+        <span className="text-[10px] font-bold mt-0.5">{t("nav.explore")}</span>
       </Link>
 
       {/* Favorites */}
@@ -66,7 +68,7 @@ export default function BottomNav() {
         }`}
       >
         <Heart size={20} strokeWidth={isActive("/favorites") ? 2.5 : 2} />
-        <span className="text-[10px] font-bold mt-0.5">Favorites</span>
+        <span className="text-[10px] font-bold mt-0.5">{t("nav.favorites")}</span>
       </Link>
 
       {/* Post Ad (Centered Action Button) */}
@@ -77,7 +79,7 @@ export default function BottomNav() {
         <div className="relative -top-3 bg-[#FF6321] text-white p-2 rounded-full shadow-sm border-4 border-white">
           <PlusCircle size={22} strokeWidth={2.5} />
         </div>
-        <span className="text-[10px] font-black mt-1 text-[#FF6321]">Post Ad</span>
+        <span className="text-[10px] font-black mt-1 text-[#FF6321]">{t("nav.postAd")}</span>
       </Link>
 
       {/* My Ads */}
@@ -88,7 +90,7 @@ export default function BottomNav() {
         }`}
       >
         <LayoutGrid size={20} strokeWidth={isActive("/my-ads") ? 2.5 : 2} />
-        <span className="text-[10px] font-bold mt-0.5">My Ads</span>
+        <span className="text-[10px] font-bold mt-0.5">{t("nav.myAds")}</span>
       </Link>
 
       {user && (userRole === "admin" || userRole === "super") && (
@@ -99,7 +101,7 @@ export default function BottomNav() {
           }`}
         >
           {userRole === "super" ? <Crown size={20} /> : <Shield size={20} />}
-          <span className="text-[10px] font-bold mt-0.5">Admin</span>
+          <span className="text-[10px] font-bold mt-0.5">{t("nav.admin")}</span>
         </Link>
       )}
 
@@ -113,7 +115,7 @@ export default function BottomNav() {
         <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-600 uppercase">
           {user ? user.email?.[0] : "?"}
         </div>
-        <span className="text-[10px] font-bold mt-0.5">{user ? "Profile" : "Login"}</span>
+        <span className="text-[10px] font-bold mt-0.5">{user ? t("nav.profile") : t("nav.login")}</span>
       </Link>
 
     </div>

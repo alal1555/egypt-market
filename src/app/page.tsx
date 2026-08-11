@@ -8,6 +8,7 @@ import AdCard from "@/components/AdCard";
 import CategoryBar from "@/components/CategoryBar";
 import { extractSpecs } from "@/lib/utils";
 import { HOME_REFRESH_EVENT } from "@/lib/home";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 /** Latest active ads shown on home — full catalog lives on /search */
 const HOME_RECENT_LIMIT = 36;
@@ -30,6 +31,7 @@ function HomeContent() {
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
   const fetchGenRef = useRef(0);
+  const { t } = useTranslation();
 
   const loadHomeData = useCallback(async () => {
     const gen = ++fetchGenRef.current;
@@ -120,7 +122,8 @@ function HomeContent() {
 
       <section className="bg-white px-4 py-4 border-b border-gray-100 text-center">
         <h2 className="text-3xl font-black text-gray-900">
-          Find everything in <span className="text-[#FF6321]">Egypt</span>
+          {t("home.heroPrefix")}{" "}
+          <span className="text-[#FF6321]">{t("home.country")}</span>
         </h2>
       </section>
 
@@ -128,10 +131,10 @@ function HomeContent() {
         {!loading && !fetchError && ads.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 px-1">
             <div>
-              <h3 className="text-lg font-black text-gray-900">Recent listings</h3>
+              <h3 className="text-lg font-black text-gray-900">{t("home.recentListings")}</h3>
               {hasMore && (
                 <p className="text-sm text-gray-500 mt-0.5">
-                  Showing the latest {ads.length} of {totalActive} ads
+                  {t("home.showingLatest", { count: ads.length, total: totalActive })}
                 </p>
               )}
             </div>
@@ -139,17 +142,17 @@ function HomeContent() {
               href="/search"
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#FF6321] text-white text-sm font-bold hover:bg-[#e85a1e] transition-colors shrink-0"
             >
-              {hasMore ? `See all ${totalActive} listings` : "Browse all listings"}
+              {hasMore ? t("home.seeAllListings", { total: totalActive }) : t("home.browseAll")}
             </Link>
           </div>
         )}
 
         {showFullLoading ? (
-          <div className="text-center py-20 text-gray-400">Loading...</div>
+          <div className="text-center py-20 text-gray-400">{t("home.loading")}</div>
         ) : !fetchError && ads.length > 0 ? (
           <>
             {loading && (
-              <p className="text-center text-xs text-gray-400 mb-4">Updating listings…</p>
+              <p className="text-center text-xs text-gray-400 mb-4">{t("home.updating")}</p>
             )}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6 items-stretch">
             {ads.map((ad) => (
@@ -173,25 +176,25 @@ function HomeContent() {
 
         {!loading && fetchError && (
           <div className="text-center py-16 text-gray-500">
-            <p className="mb-4">Could not load listings. Please try again.</p>
+            <p className="mb-4">{t("home.loadError")}</p>
             <button
               type="button"
               onClick={() => setRefreshKey((k) => k + 1)}
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#FF6321] text-white text-sm font-bold hover:bg-[#e85a1e]"
             >
-              Retry
+              {t("home.retry")}
             </button>
           </div>
         )}
 
         {!loading && !fetchError && ads.length === 0 && (
           <div className="text-center py-16 text-gray-500">
-            <p className="mb-4">No listings yet. Be the first to post an ad!</p>
+            <p className="mb-4">{t("home.noListings")}</p>
             <Link
               href="/post-ad"
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#FF6321] text-white text-sm font-bold hover:bg-[#e85a1e]"
             >
-              Post an ad
+              {t("home.postAd")}
             </Link>
           </div>
         )}
@@ -202,7 +205,7 @@ function HomeContent() {
               href="/search"
               className="inline-flex items-center justify-center px-6 py-3 rounded-xl border-2 border-[#FF6321] text-[#FF6321] text-sm font-bold hover:bg-orange-50 transition-colors"
             >
-              See all listings
+              {t("home.seeAll")}
             </Link>
           </div>
         )}

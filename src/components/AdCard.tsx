@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Heart, EyeOff, Clock, CheckCircle, MapPin, CalendarClock } from "lucide-react"; 
 import { supabase } from "@/lib/supabase";
 import { getListingDisplayStatus, type ListingDisplayStatus } from "@/constants/adPricing";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 interface AdProps {
   id: string;
@@ -30,6 +31,7 @@ export default function AdCard({
   const [userId, setUserId] = useState<string | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (propUserId) { setUserId(propUserId); return; }
@@ -56,7 +58,7 @@ export default function AdCard({
       const { data: { session } } = await supabase.auth.getSession();
       activeUserId = session?.user?.id || null;
     }
-    if (!activeUserId) { alert("Please login to save favorite ads!"); return; }
+    if (!activeUserId) { alert(t("common.loginToFavorite")); return; }
     if (loading) return;
     setLoading(true);
 
@@ -71,10 +73,10 @@ export default function AdCard({
   };
 
   const statusConfig: Record<ListingDisplayStatus, { label: string, color: string, icon: React.ReactNode }> = {
-    pending: { label: "Pending", color: "bg-amber-500", icon: <Clock size={11} /> },
-    active: { label: "Live", color: "bg-emerald-500", icon: <CheckCircle size={11} /> },
-    expired: { label: "Expired", color: "bg-gray-500", icon: <CalendarClock size={11} /> },
-    banned: { label: "Banned", color: "bg-red-600", icon: <EyeOff size={11} /> }
+    pending: { label: t("adStatus.pending"), color: "bg-amber-500", icon: <Clock size={11} /> },
+    active: { label: t("adStatus.live"), color: "bg-emerald-500", icon: <CheckCircle size={11} /> },
+    expired: { label: t("adStatus.expired"), color: "bg-gray-500", icon: <CalendarClock size={11} /> },
+    banned: { label: t("adStatus.banned"), color: "bg-red-600", icon: <EyeOff size={11} /> }
   };
 
   const displayStatus = showStatus ? getListingDisplayStatus({ status, expires_at }) : null;

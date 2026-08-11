@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
 import { Heart } from "lucide-react";
 import { extractSpecs } from "@/lib/utils";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 interface Ad {
   id: string;
@@ -25,6 +26,7 @@ export default function FavoritesPage() {
   // Maps for Make and Model name lookup
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
+  const { t } = useTranslation();
 
   useEffect(() => {
     async function loadData() {
@@ -74,7 +76,7 @@ export default function FavoritesPage() {
     return (
       <div className="w-full max-w-7xl mx-auto px-4 py-20 text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6321] mx-auto"></div>
-        <p className="text-gray-500 mt-4 font-medium">Loading your shortlists...</p>
+        <p className="text-gray-500 mt-4 font-medium">{t("favorites.loading")}</p>
       </div>
     );
   }
@@ -84,8 +86,8 @@ export default function FavoritesPage() {
       <div className="w-full max-w-7xl mx-auto px-4 py-20 text-center">
         <div className="bg-gray-50 max-w-md mx-auto p-8 rounded-2xl border border-dashed">
           <Heart size={40} className="text-gray-300 mx-auto mb-3" />
-          <h2 className="text-xl font-bold text-gray-800">Access Denied</h2>
-          <p className="text-gray-500 text-sm mt-1 mb-4">Please log in to view your favorite listings.</p>
+          <h2 className="text-xl font-bold text-gray-800">{t("favorites.accessDenied")}</h2>
+          <p className="text-gray-500 text-sm mt-1 mb-4">{t("favorites.loginRequired")}</p>
         </div>
       </div>
     );
@@ -95,17 +97,17 @@ export default function FavoritesPage() {
     <div className="w-full max-w-7xl mx-auto px-4 py-10">
       <div className="flex items-center gap-3 border-b pb-5 mb-8">
         <Heart className="text-red-500 fill-red-500" size={24} />
-        <h1 className="text-2xl font-black text-gray-900">My Saved Favorites</h1>
+        <h1 className="text-2xl font-black text-gray-900">{t("favorites.savedTitle")}</h1>
         <span className="text-gray-400 font-normal text-sm bg-gray-100 px-2.5 py-0.5 rounded-full ml-1">
-          {favoriteAds.length} items
+          {t("favorites.items", { count: favoriteAds.length })}
         </span>
       </div>
 
       {favoriteAds.length === 0 ? (
         <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed w-full max-w-xl mx-auto">
           <Heart size={36} className="text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500 font-medium">Your favorites board is completely empty.</p>
-          <p className="text-xs text-gray-400 mt-1">Tap the heart icon on any ad banner to save it here.</p>
+          <p className="text-gray-500 font-medium">{t("favorites.emptyBoard")}</p>
+          <p className="text-xs text-gray-400 mt-1">{t("favorites.emptyHint")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 w-full">

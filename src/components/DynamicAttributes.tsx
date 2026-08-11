@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getPostAdAttributes, AttributeField } from "../constants/categoryConfig";
 import { sortWithOtherLast } from "@/lib/utils";
+import { useTranslation } from "@/i18n/LocaleProvider";
+import { localizedAttributeLabel, localizedOption } from "@/i18n/catalog";
 
 interface DynamicAttributesProps {
   category: string;
@@ -27,6 +29,7 @@ export default function DynamicAttributes({
   loadingMakes,
 }: DynamicAttributesProps) {
   const fields: AttributeField[] = getPostAdAttributes(category);
+  const { t, locale } = useTranslation();
 
   const [models, setModels] = useState<{ id: number; name: string }[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
@@ -76,7 +79,7 @@ export default function DynamicAttributes({
           onChange={(e) => handleInputChange("make_id", e.target.value)}
           className={cls}
         >
-          <option value="">Select Make</option>
+          <option value="">{t("common.selectMake")}</option>
           {makes.map((m) => (
             <option key={m.id} value={m.id}>
               {m.name}
@@ -94,7 +97,7 @@ export default function DynamicAttributes({
           className={cls}
           disabled={!formData.attributes.make_id || loadingModels}
         >
-          <option value="">{loadingModels ? "Loading..." : "Select Model"}</option>
+          <option value="">{loadingModels ? t("common.loading") : t("common.selectModel")}</option>
           {models.map((m) => (
             <option key={m.id} value={m.id}>
               {m.name}
@@ -114,7 +117,7 @@ export default function DynamicAttributes({
             onChange={(e) => handleToggleChange(field.key, e.target.checked)}
             className="h-5 w-5 rounded border-gray-300 text-[#FF6321] focus:ring-[#FF6321]"
           />
-          <span className="text-sm text-gray-700">{checked ? "Yes" : "No"}</span>
+          <span className="text-sm text-gray-700">{checked ? t("common.yes") : t("common.no")}</span>
         </label>
       );
     }
@@ -126,10 +129,10 @@ export default function DynamicAttributes({
           onChange={(e) => handleInputChange(field.key, e.target.value)}
           className={cls}
         >
-          <option value="">Select {field.label}</option>
+          <option value="">{t("common.selectOption")} {localizedAttributeLabel(field.label, locale)}</option>
           {field.options.map((opt) => (
             <option key={opt} value={opt}>
-              {opt}
+              {localizedOption(opt, locale)}
             </option>
           ))}
         </select>
@@ -166,7 +169,7 @@ export default function DynamicAttributes({
     <div className="space-y-4 animate-fadeIn">
       {fields.map((field) => (
         <div key={field.key} className="flex flex-col">
-          <label className="text-sm font-bold text-gray-700 mb-1">{field.label}</label>
+          <label className="text-sm font-bold text-gray-700 mb-1">{localizedAttributeLabel(field.label, locale)}</label>
           {renderField(field)}
         </div>
       ))}

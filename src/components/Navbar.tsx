@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Search, Compass, Heart, Shield, Crown, LayoutGrid, PlusCircle, User } from "lucide-react";
 import { HOME_REFRESH_EVENT } from "@/lib/home";
+import { useTranslation } from "@/i18n/LocaleProvider";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 function NavbarContent() {
   const [user, setUser] = useState<any>(null);
@@ -14,6 +16,7 @@ function NavbarContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
 
   // Sync the search input with the URL 'q' parameter
   useEffect(() => {
@@ -96,7 +99,7 @@ function NavbarContent() {
         <form onSubmit={handleSearchSubmit} className="flex-1 max-w-xs relative items-center hidden md:flex">
           <input
             type="text"
-            placeholder="Search..."
+            placeholder={t("nav.searchPlaceholder")}
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
             className="w-full bg-gray-50 text-gray-700 pl-4 pr-10 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#FF6321] text-sm transition"
@@ -107,10 +110,11 @@ function NavbarContent() {
         </form>
 
         {/* DESKTOP ACTIONS TRAY */}
-        <div className="hidden md:flex items-center gap-4 md:gap-6 shrink-0">
+        <div className="hidden md:flex items-center gap-3 md:gap-4 shrink-0">
+          <LanguageSwitcher />
           <Link href="/search" className="p-1.5 flex items-center gap-1 text-sm font-bold text-gray-600 hover:text-[#FF6321] transition-colors">
             <Compass size={18} />
-            <span>Explore</span>
+            <span>{t("nav.explore")}</span>
           </Link>
 
           {user ? (
@@ -120,44 +124,44 @@ function NavbarContent() {
                   userRole === "super" ? "text-amber-700 bg-amber-50 border border-amber-200" : "text-[#FF6321] bg-orange-50"
                 }`}>
                   {userRole === "super" ? <Crown size={14} /> : <Shield size={14} />}
-                  <span>{userRole === "super" ? "Supreme Admin" : "Admin Panel"}</span>
+                  <span>{userRole === "super" ? t("nav.supremeAdmin") : t("nav.adminPanel")}</span>
                 </Link>
               )}
 
               <Link href="/favorites" className="p-1.5 text-gray-600 hover:text-red-500 font-bold text-sm flex items-center gap-1">
                 <Heart size={18} />
-                <span>Favorites</span>
+                <span>{t("nav.favorites")}</span>
               </Link>
 
               <Link href="/my-ads" className="p-1.5 text-gray-600 hover:text-[#FF6321] font-bold text-sm flex items-center gap-1">
                 <LayoutGrid size={18} />
-                <span>My Ads</span>
+                <span>{t("nav.myAds")}</span>
               </Link>
 
               <Link href="/profile" prefetch={false} className="p-1.5 text-gray-600 hover:text-[#FF6321] font-bold text-sm flex items-center gap-1">
                 <User size={18} />
-                <span>Profile</span>
+                <span>{t("nav.profile")}</span>
               </Link>
           
               <Link href="/post-ad" className="text-sm font-bold text-white bg-[#FF6321] hover:bg-[#e85a1e] transition-colors whitespace-nowrap flex items-center gap-1.5 px-4 py-2 rounded-xl shadow-sm">
                 <PlusCircle size={16} />
-                <span>Post Ad</span>
+                <span>{t("nav.postAd")}</span>
               </Link>
               
               <button 
                 onClick={handleLogout} 
                 className="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors border border-gray-100 px-2.5 py-1.5 rounded-xl"
               >
-                Logout
+                {t("nav.logout")}
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-3">
               <Link href="/login" className="text-sm font-bold text-gray-600 hover:text-[#FF6321] px-2 py-1">
-                Login
+                {t("nav.login")}
               </Link>
               <Link href="/signup" className="rounded-xl bg-[#FF6321] px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#e85a1e] transition-all">
-                Start Selling
+                {t("nav.startSelling")}
               </Link>
             </div>
           )}
@@ -165,6 +169,7 @@ function NavbarContent() {
 
         {/* MOBILE AUTH BUTTONS */}
         <div className="md:hidden flex items-center gap-2 shrink-0">
+          <LanguageSwitcher compact />
           {user ? (
             <>
               <Link
@@ -172,13 +177,13 @@ function NavbarContent() {
                 prefetch={false}
                 className="text-xs font-bold text-gray-600 border border-gray-200 px-3 py-1.5 rounded-xl bg-white hover:text-[#FF6321] transition-colors"
               >
-                Profile
+                {t("nav.profile")}
               </Link>
               <button 
                 onClick={handleLogout}
                 className="text-xs font-bold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-xl bg-white hover:text-red-500 transition-colors"
               >
-                Logout
+                {t("nav.logout")}
               </button>
             </>
           ) : (
@@ -197,7 +202,7 @@ function NavbarContent() {
         <div className="relative">
           <input
             type="search"
-            placeholder="Search ads..."
+            placeholder={t("nav.searchPlaceholderMobile")}
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
             className="w-full bg-gray-50 text-gray-700 pl-4 pr-10 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#FF6321] text-sm transition"
