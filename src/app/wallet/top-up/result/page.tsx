@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { CheckCircle, Clock, XCircle } from "lucide-react";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 function TopUpResultContent() {
   const searchParams = useSearchParams();
@@ -13,6 +14,7 @@ function TopUpResultContent() {
     "loading",
   );
   const [amount, setAmount] = useState<number | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!topUpId) {
@@ -71,7 +73,7 @@ function TopUpResultContent() {
     return (
       <div className="text-center py-16">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#FF6321] mx-auto mb-4" />
-        <p className="text-gray-500">Confirming your payment…</p>
+        <p className="text-gray-500">{t("walletTopUp.confirming")}</p>
       </div>
     );
   }
@@ -80,16 +82,18 @@ function TopUpResultContent() {
     return (
       <div className="text-center py-12 px-6">
         <CheckCircle size={48} className="text-emerald-500 mx-auto mb-4" />
-        <h1 className="text-2xl font-black text-gray-900 mb-2">Balance added</h1>
+        <h1 className="text-2xl font-black text-gray-900 mb-2">{t("walletTopUp.balanceAdded")}</h1>
         <p className="text-gray-600 mb-6">
-          {amount != null ? `${amount} EGP` : "Your top-up"} is now in your wallet.
+          {t("walletTopUp.addedToWallet", {
+            amount: amount != null ? `${amount} ${t("common.egp")}` : t("walletTopUp.yourTopUp"),
+          })}
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
           <Link href="/profile" className="bg-[#FF6321] text-white font-bold px-6 py-3 rounded-xl">
-            View wallet
+            {t("walletTopUp.viewWallet")}
           </Link>
           <Link href="/post-ad" className="border border-gray-200 font-bold px-6 py-3 rounded-xl">
-            Post an ad
+            {t("walletTopUp.postAd")}
           </Link>
         </div>
       </div>
@@ -100,13 +104,10 @@ function TopUpResultContent() {
     return (
       <div className="text-center py-12 px-6">
         <Clock size={48} className="text-amber-500 mx-auto mb-4" />
-        <h1 className="text-2xl font-black text-gray-900 mb-2">Payment processing</h1>
-        <p className="text-gray-600 mb-6">
-          Your payment is still being confirmed. Refresh Profile in a minute — balance will appear
-          once Paymob confirms.
-        </p>
+        <h1 className="text-2xl font-black text-gray-900 mb-2">{t("walletTopUp.processing")}</h1>
+        <p className="text-gray-600 mb-6">{t("walletTopUp.processingHint")}</p>
         <Link href="/profile" className="text-[#FF6321] font-bold underline">
-          Go to Profile
+          {t("walletTopUp.goToProfile")}
         </Link>
       </div>
     );
@@ -115,14 +116,12 @@ function TopUpResultContent() {
   return (
     <div className="text-center py-12 px-6">
       <XCircle size={48} className="text-red-500 mx-auto mb-4" />
-      <h1 className="text-2xl font-black text-gray-900 mb-2">Payment not completed</h1>
+      <h1 className="text-2xl font-black text-gray-900 mb-2">{t("walletTopUp.notCompleted")}</h1>
       <p className="text-gray-600 mb-6">
-        {status === "missing"
-          ? "Missing payment reference. Try topping up again from Profile."
-          : "Payment was cancelled or could not be verified."}
+        {status === "missing" ? t("walletTopUp.missingRef") : t("walletTopUp.cancelled")}
       </p>
       <Link href="/wallet/top-up" className="bg-[#FF6321] text-white font-bold px-6 py-3 rounded-xl">
-        Try again
+        {t("walletTopUp.tryAgain")}
       </Link>
     </div>
   );
@@ -133,7 +132,7 @@ export default function TopUpResultPage() {
     <div className="max-w-lg mx-auto px-4 py-10">
       <Suspense
         fallback={
-          <div className="text-center py-16 text-gray-500">Loading payment result…</div>
+          <div className="text-center py-16 text-gray-500">{t("walletTopUp.loadingResult")}</div>
         }
       >
         <TopUpResultContent />

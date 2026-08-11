@@ -8,6 +8,7 @@ import SearchFilters from "@/components/SearchFilters";
 import { SlidersHorizontal, X } from "lucide-react";
 import { CATEGORY_CONFIG, getAttributesBySlug, getCategoryGroups } from "@/constants/categoryConfig";
 import { extractSpecs } from "@/lib/utils";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 interface Ad {
   id: string; title: string; price: number; location: string; category_slug: string;
@@ -28,6 +29,7 @@ function SearchResults() {
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const { t } = useTranslation();
 
   const subCategoryAttributes = useMemo(() => getAttributesBySlug(subCatFilter), [subCatFilter]);
   const selectedMainCategoryObj = useMemo(() => CATEGORY_CONFIG.find((c) => c.slug === mainCatFilter), [mainCatFilter]);
@@ -159,7 +161,7 @@ function SearchResults() {
                 className="md:hidden flex items-center gap-2 shrink-0 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 hover:border-[#FF6321] hover:text-[#FF6321] transition-colors"
               >
                 <SlidersHorizontal size={16} />
-                Filters
+                {t("search.filters")}
                 {activeFilterCount > 0 && (
                   <span className="bg-[#FF6321] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                     {activeFilterCount}
@@ -167,7 +169,7 @@ function SearchResults() {
                 )}
               </button>
               <h2 className="text-base md:text-xl font-bold text-gray-900 truncate">
-                {ads.length} Ads found
+                {t("searchPage.adsFound", { count: ads.length })}
               </h2>
             </div>
             {hasActiveFilters && (
@@ -175,14 +177,14 @@ function SearchResults() {
                 onClick={() => router.push("/search")}
                 className="text-sm text-gray-500 hover:text-[#FF6321] underline shrink-0"
               >
-                Clear all
+                {t("searchPage.clearAll")}
               </button>
             )}
           </div>
 
           {query && (
             <p className="mb-4 text-sm text-gray-500 md:hidden">
-              Results for &ldquo;<span className="font-semibold text-gray-700">{query}</span>&rdquo;
+              {t("searchPage.resultsFor")} &ldquo;<span className="font-semibold text-gray-700">{query}</span>&rdquo;
             </p>
           )}
 
@@ -206,13 +208,13 @@ function SearchResults() {
 
           {ads.length === 0 && (
             <div className="text-center py-16 text-gray-500">
-              No ads match your filters.
+              {t("searchPage.noMatch")}
               {hasActiveFilters && (
                 <button
                   onClick={() => router.push("/search")}
                   className="block mx-auto mt-3 text-sm text-[#FF6321] font-bold underline"
                 >
-                  Clear filters
+                  {t("searchPage.clearFilters")}
                 </button>
               )}
             </div>
@@ -225,7 +227,7 @@ function SearchResults() {
         <div className="md:hidden fixed inset-0 z-[60]">
           <button
             type="button"
-            aria-label="Close filters"
+            aria-label={t("searchPage.closeFilters")}
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileFiltersOpen(false)}
           />
@@ -233,13 +235,13 @@ function SearchResults() {
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 shrink-0">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <SlidersHorizontal size={18} />
-                Filters
+                {t("search.filters")}
               </h3>
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(false)}
                 className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
-                aria-label="Close"
+                aria-label={t("searchPage.closeFilters")}
               >
                 <X size={20} />
               </button>
@@ -255,7 +257,7 @@ function SearchResults() {
                 onClick={() => setMobileFiltersOpen(false)}
                 className="w-full py-3 rounded-xl bg-[#FF6321] text-white font-bold hover:bg-[#e85a1e] transition-colors"
               >
-                Show {ads.length} results
+                {t("searchPage.showResults", { count: ads.length })}
               </button>
             </div>
           </div>

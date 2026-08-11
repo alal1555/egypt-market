@@ -6,6 +6,11 @@ import { Heart, EyeOff, Clock, CheckCircle, MapPin, CalendarClock } from "lucide
 import { supabase } from "@/lib/supabase";
 import { getListingDisplayStatus, type ListingDisplayStatus } from "@/constants/adPricing";
 import { useTranslation } from "@/i18n/LocaleProvider";
+import {
+  formatAttributeValue,
+  getAttributeLabelForKey,
+  localizedAttributeLabel,
+} from "@/i18n/catalog";
 
 interface AdProps {
   id: string;
@@ -26,12 +31,13 @@ interface AdProps {
 
 export default function AdCard({ 
   id, title, price, location, imageUrl, specs = {}, postedDate,
-  makeName, modelName, currentUserId: propUserId, status = "active", expires_at, showStatus = false 
+  makeName, modelName, currentUserId: propUserId, status = "active", expires_at, showStatus = false,
+  category = "",
 }: AdProps) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   useEffect(() => {
     if (propUserId) { setUserId(propUserId); return; }
@@ -113,17 +119,21 @@ export default function AdCard({
           
           {/* This section grows to fill space, pushing price to the bottom */}
           <div className="flex-grow">
-            <p className="font-black text-xl mb-2 text-[#FF6321]">{price} EGP</p>
+            <p className="font-black text-xl mb-2 text-[#FF6321]">{price} {t("common.egp")}</p>
             
             {specs && Object.keys(specs).length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
                 {Object.entries(specs).map(([key, value]) => {
                   const technicalKeys = ['make_id', 'model_id', 'cat_id', 'sub_cat_id', 'user_id', 'id', 'created_at', 'status'];
                   if (technicalKeys.includes(key) || !value) return null;
-                  
+
+                  const enLabel = category ? getAttributeLabelForKey(category, key) : key.replace(/_/g, " ");
+                  const label = localizedAttributeLabel(enLabel, locale);
+                  const displayVal = formatAttributeValue(value, locale, t, key);
+
                   return (
-                    <span key={key} className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-1 rounded-md capitalize">
-                      {key.replace(/_/g, ' ')}: {String(value)}
+                    <span key={key} className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-1 rounded-md">
+                      {label}: {displayVal}
                     </span>
                   );
                 })}

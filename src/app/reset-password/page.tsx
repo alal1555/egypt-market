@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -39,6 +40,7 @@ async function updatePasswordWithToken(accessToken: string, password: string) {
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,27 +62,27 @@ export default function ResetPasswordPage() {
         accessTokenRef.current = session.access_token;
         setReady(true);
       } else {
-        setError("Recovery link is invalid or expired. Please request a new reset link.");
+        setError(t("resetPassword.invalidLink"));
       }
     });
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password.length < 6) {
-      alert("Password must be at least 6 characters.");
+      alert(t("resetPassword.passwordMin"));
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match.");
+      alert(t("resetPassword.passwordMismatch"));
       return;
     }
 
     const token = accessTokenRef.current;
     if (!token) {
-      alert("Recovery session expired. Please request a new reset link.");
+      alert(t("resetPassword.sessionExpired"));
       return;
     }
 
@@ -89,11 +91,11 @@ export default function ResetPasswordPage() {
     try {
       await updatePasswordWithToken(token, password);
       await supabase.auth.signOut();
-      alert("Password updated successfully! Please log in with your new password.");
+      alert(t("resetPassword.updated"));
       router.push("/login");
       router.refresh();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to update password.";
+      const message = err instanceof Error ? err.message : t("resetPassword.updateFailed");
       alert(message);
     } finally {
       setLoading(false);
@@ -104,10 +106,10 @@ export default function ResetPasswordPage() {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-gray-100 text-center space-y-4">
-          <h1 className="text-2xl font-black">Link expired</h1>
+          <h1 className="text-2xl font-black">{t("resetPassword.linkExpired")}</h1>
           <p className="text-sm text-gray-600">{error}</p>
           <Link href="/forgot-password" className="inline-block text-sm font-bold text-[#FF6321] hover:underline">
-            Request a new reset link
+            {t("resetPassword.requestNew")}
           </Link>
         </div>
       </main>
@@ -117,7 +119,7 @@ export default function ResetPasswordPage() {
   if (!ready) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500">{t("common.loading")}</div>
       </main>
     );
   }
@@ -125,12 +127,12 @@ export default function ResetPasswordPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-        <h1 className="text-2xl font-black text-center mb-2">Set New Password</h1>
-        <p className="text-sm text-gray-500 text-center mb-6">Choose a new password for your account.</p>
+        <h1 className="text-2xl font-black text-center mb-2">{t("resetPassword.title")}</h1>
+        <p className="text-sm text-gray-500 text-center mb-6">{t("resetPassword.subtitle")}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">New Password</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">{t("resetPassword.newPassword")}</label>
             <input
               type="password"
               className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#FF6321]"
@@ -143,7 +145,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Confirm Password</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">{t("resetPassword.confirmPassword")}</label>
             <input
               type="password"
               className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#FF6321]"
@@ -160,7 +162,7 @@ export default function ResetPasswordPage() {
             disabled={loading}
             className="w-full bg-[#FF6321] text-white font-bold py-3 rounded-lg hover:bg-[#e85a1e] transition-colors disabled:opacity-60"
           >
-            {loading ? "Updating..." : "Update Password"}
+            {loading ? t("resetPassword.updating") : t("resetPassword.updateButton")}
           </button>
         </form>
       </div>

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 export default function LegalPageLayout({
   title,
@@ -7,6 +10,8 @@ export default function LegalPageLayout({
   title: string;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 md:py-12">
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">{title}</h1>
@@ -15,7 +20,7 @@ export default function LegalPageLayout({
         href="/"
         className="inline-block mt-8 text-[#FF6321] font-bold text-sm hover:underline"
       >
-        ← Back to home
+        {t("legal.backHome")}
       </Link>
     </div>
   );

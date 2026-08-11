@@ -13,6 +13,7 @@ import {
   isBalanceExpired,
   normalizeEgyptPhone,
 } from "@/lib/wallet";
+import { useTranslation } from "@/i18n/LocaleProvider";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -70,6 +71,8 @@ export default function ProfileClient() {
   const [otpPhone, setOtpPhone] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+  const [verifyTone, setVerifyTone] = useState<"success" | "error" | null>(null);
+  const { t } = useTranslation();
 
   const loadWallet = async (userId: string) => {
     const { data } = await supabase
@@ -115,8 +118,6 @@ export default function ProfileClient() {
                 welcome_credits_granted: profile.welcome_credits_granted ?? false,
               });
             }
-          })
-          .finally(() => {
             if (active) setLoading(false);
           });
       } else {
@@ -130,7 +131,7 @@ export default function ProfileClient() {
 
     const timeout = window.setTimeout(() => {
       if (active && !settled) {
-        setLoadError("Session timed out. Please refresh or log in again.");
+        setLoadError(t("profile.sessionTimeout"));
         setLoading(false);
       }
     }, 5000);
@@ -150,7 +151,7 @@ export default function ProfileClient() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        alert("Session expired. Please log in again.");
+        alert(t("profile.sessionExpired"));
         return;
       }
 
@@ -160,9 +161,9 @@ export default function ProfileClient() {
           phone_number: formData.phone,
         },
       });
-      alert("Profile updated successfully!");
+      alert(t("profile.profileUpdated"));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not save profile.");
+      alert(err instanceof Error ? err.message : t("profile.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -174,16 +175,19 @@ export default function ProfileClient() {
       setOtpSent(false);
       setOtpCode("");
       setOtpPhone("");
-      setVerifyMessage("Phone number changed — send a new verification code.");
+      setVerifyMessage(t("profile.phoneChanged"));
+      setVerifyTone("error");
     }
   };
 
   const handleSendOtp = async () => {
     setVerifyMessage(null);
+    setVerifyTone(null);
     const phone = normalizeEgyptPhone(formData.phone);
 
     if (!isValidEgyptPhone(formData.phone)) {
-      setVerifyMessage("Enter a valid Egyptian mobile number (e.g. 01012345678).");
+      setVerifyMessage(t("profile.invalidPhoneShort"));
+      setVerifyTone("error");
       return;
     }
 
@@ -191,7 +195,8 @@ export default function ProfileClient() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setVerifyMessage("Session expired. Please log in again.");
+        setVerifyMessage(t("profile.sessionExpired"));
+        setVerifyTone("error");
         return;
       }
 
@@ -202,14 +207,16 @@ export default function ProfileClient() {
 
       setOtpSent(true);
       setOtpPhone(formData.phone.trim());
-      setVerifyMessage(`Verification code sent via SMS to ${formData.phone.trim()}.`);
+      setVerifyMessage(t("profile.codeSent", { phone: formData.phone.trim() }));
+      setVerifyTone("success");
     } catch (err) {
       if (err instanceof DOMException && err.name === "TimeoutError") {
-        setVerifyMessage("Request timed out. Check Supabase → Edge Functions → send-sms → Logs.");
+        setVerifyMessage(t("profile.otpTimeout"));
       } else {
-        const message = err instanceof Error ? err.message : "Could not send verification code.";
+        const message = err instanceof Error ? err.message : t("profile.sendCodeFailed");
         setVerifyMessage(message);
       }
+      setVerifyTone("error");
     } finally {
       setVerifying(false);
     }
@@ -217,6 +224,7 @@ export default function ProfileClient() {
 
   const handleVerifyOtp = async () => {
     setVerifyMessage(null);
+    setVerifyTone(null);
     setVerifying(true);
     const phone = normalizeEgyptPhone(otpPhone || formData.phone);
     const { error } = await supabase.auth.verifyOtp({
@@ -227,26 +235,29 @@ export default function ProfileClient() {
     if (error) {
       setVerifying(false);
       setVerifyMessage(error.message);
+      setVerifyTone("error");
       return;
     }
     const { data: granted, error: grantError } = await supabase.rpc("grant_welcome_credits");
     setVerifying(false);
     if (grantError) {
       setVerifyMessage(grantError.message);
+      setVerifyTone("error");
       return;
     }
     if (user) await loadWallet(user.id);
     setOtpSent(false);
     setOtpCode("");
     setOtpPhone("");
-    setVerifyMessage("Phone verified! 300 EGP added to your wallet balance.");
+    setVerifyMessage(t("profile.phoneVerified", { amount: WELCOME_BALANCE_EGP }));
+    setVerifyTone("success");
   };
 
   if (loading) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#FF6321]" />
-        <p className="text-gray-500 text-sm">Loading profile...</p>
+        <p className="text-gray-500 text-sm">{t("profile.loading")}</p>
       </div>
     );
   }
@@ -254,10 +265,10 @@ export default function ProfileClient() {
   if (loadError) {
     return (
       <div className="max-w-md mx-auto my-20 p-8 text-center bg-white rounded-3xl shadow-lg border">
-        <h2 className="text-2xl font-bold mb-4">Something went wrong</h2>
+        <h2 className="text-2xl font-bold mb-4">{t("profile.errorTitle")}</h2>
         <p className="text-gray-500 mb-6">{loadError}</p>
         <Link href="/login" className="bg-[#FF6321] text-white px-6 py-3 rounded-xl font-bold">
-          Go to Login
+          {t("profile.goToLogin")}
         </Link>
       </div>
     );
@@ -266,17 +277,17 @@ export default function ProfileClient() {
   if (!user) {
     return (
       <div className="max-w-md mx-auto my-20 p-8 text-center bg-white rounded-3xl shadow-lg border">
-        <h2 className="text-2xl font-bold mb-4">Please Sign In</h2>
-        <p className="text-gray-500 mb-6">Log in to view and edit your profile.</p>
+        <h2 className="text-2xl font-bold mb-4">{t("profile.signInTitle")}</h2>
+        <p className="text-gray-500 mb-6">{t("profile.signInHint")}</p>
         <Link href="/login" prefetch={false} className="bg-[#FF6321] text-white px-6 py-3 rounded-xl font-bold">
-          Login
+          {t("nav.login")}
         </Link>
       </div>
     );
   }
 
   const roleLabel =
-    role === "super" ? "Supreme Admin" : role === "admin" ? "Admin" : "Member";
+    role === "super" ? t("profile.roleSuper") : role === "admin" ? t("profile.roleAdmin") : t("profile.roleMember");
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10 min-h-[50vh]">
@@ -287,7 +298,7 @@ export default function ProfileClient() {
               {formData.fullName?.[0] || formData.email?.[0] || "?"}
             </div>
             <div>
-              <h1 className="text-2xl font-black">{formData.fullName || "Your Profile"}</h1>
+              <h1 className="text-2xl font-black">{formData.fullName || t("profile.yourProfile")}</h1>
               <p className="text-orange-100 text-sm mt-1">{formData.email}</p>
             </div>
           </div>
@@ -307,7 +318,7 @@ export default function ProfileClient() {
           {memberSince && (
             <span className="inline-flex items-center gap-2 text-gray-500">
               <Calendar size={16} />
-              Member since {memberSince}
+              {t("profile.memberSince", { date: memberSince })}
             </span>
           )}
         </div>
@@ -316,42 +327,42 @@ export default function ProfileClient() {
         <div className="px-8 py-6 border-b bg-white">
           <h2 className="flex items-center gap-2 font-black text-gray-900 mb-4">
             <Wallet size={20} className="text-[#FF6321]" />
-            Ad Credits & Balance
+            {t("profile.walletTitle")}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-              <p className="text-xs font-bold text-gray-500 uppercase">Free ads</p>
+              <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAds")}</p>
               <p className="text-2xl font-black text-[#FF6321]">{wallet?.free_ads_remaining ?? 0}</p>
               {!wallet?.phone_verified && (
-                <p className="text-[10px] text-gray-400 mt-1">Starter pack for new users</p>
+                <p className="text-[10px] text-gray-400 mt-1">{t("profile.starterPack")}</p>
               )}
             </div>
             {wallet?.phone_verified ? (
               <>
                 <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-                  <p className="text-xs font-bold text-gray-500 uppercase">Wallet balance</p>
-                  <p className="text-2xl font-black text-[#FF6321]">{wallet.balance} EGP</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
+                  <p className="text-2xl font-black text-[#FF6321]">{wallet.balance} {t("common.egp")}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-gray-50 border">
-                  <p className="text-xs font-bold text-gray-500 uppercase">Paid ads left</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.paidAdsLeft")}</p>
                   <p className="text-2xl font-black text-gray-800">
                     {adsRemainingFromBalance(
                       wallet.balance,
                       isBalanceExpired(wallet.balance_expires_at)
                     )}
                   </p>
-                  <p className="text-[10px] text-gray-400 mt-1">{AD_POST_PRICE_EGP} EGP per ad</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{t("profile.perAd", { price: AD_POST_PRICE_EGP })}</p>
                 </div>
               </>
             ) : (
               <div className="p-4 rounded-xl bg-gray-50 border sm:col-span-2">
-                <p className="text-xs font-bold text-gray-500 uppercase">Wallet balance</p>
+                <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
                 <p className="text-lg font-black text-gray-700 mt-1">
-                  Verify phone to unlock {WELCOME_BALANCE_EGP} EGP
+                  {t("profile.unlockBalance", { amount: WELCOME_BALANCE_EGP })}
                 </p>
                 <p className="text-[10px] text-gray-400 mt-1">
-                  {AD_POST_PRICE_EGP} EGP per ad after free ads are used
+                  {t("profile.perAdAfterFree", { price: AD_POST_PRICE_EGP })}
                 </p>
               </div>
             )}
@@ -361,11 +372,10 @@ export default function ProfileClient() {
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
               <p className="flex items-center gap-2 font-bold text-amber-900 mb-2">
                 <Gift size={18} />
-                Unlock {WELCOME_BALANCE_EGP} EGP wallet balance
+                {t("profile.unlockTitle", { amount: WELCOME_BALANCE_EGP })}
               </p>
               <p className="text-sm text-amber-800 mb-4">
-                You already have {WELCOME_FREE_ADS} free ads to get started. Verify your Egyptian
-                mobile below to add {WELCOME_BALANCE_EGP} EGP to your wallet (valid 90 days).
+                {t("profile.unlockDesc", { freeAds: WELCOME_FREE_ADS, amount: WELCOME_BALANCE_EGP })}
               </p>
               <div className="space-y-3">
                 <input
@@ -377,12 +387,12 @@ export default function ProfileClient() {
                 />
                 {formData.phone.trim() && isValidEgyptPhone(formData.phone) ? (
                   <p className="text-sm text-amber-900">
-                    SMS will be sent to:{" "}
+                    {t("profile.smsWillSend")}{" "}
                     <span className="font-bold">{formData.phone.trim()}</span>
                   </p>
                 ) : formData.phone.trim() ? (
                   <p className="text-sm text-red-600">
-                    Enter a valid Egyptian mobile (e.g. 01012345678).
+                    {t("profile.invalidPhone")}
                   </p>
                 ) : null}
 
@@ -393,12 +403,12 @@ export default function ProfileClient() {
                     disabled={verifying || !isValidEgyptPhone(formData.phone)}
                     className="w-full py-2.5 rounded-xl bg-[#FF6321] text-white font-bold text-sm hover:bg-[#e85a1e] disabled:opacity-60"
                   >
-                    {verifying ? "Sending…" : "Send verification code"}
+                    {verifying ? t("profile.sending") : t("profile.sendCode")}
                   </button>
                 ) : (
                   <>
                     <p className="text-xs text-amber-800">
-                      Code sent to <span className="font-semibold">{otpPhone}</span>
+                      {t("profile.codeSentTo", { phone: otpPhone })}
                     </p>
                     <div className="flex gap-2">
                       <input
@@ -406,7 +416,7 @@ export default function ProfileClient() {
                         inputMode="numeric"
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value)}
-                        placeholder="SMS code"
+                        placeholder={t("profile.smsCode")}
                         className="flex-1 p-3 border rounded-xl text-sm bg-white"
                       />
                       <button
@@ -415,7 +425,7 @@ export default function ProfileClient() {
                         disabled={verifying || otpCode.length < 4}
                         className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 disabled:opacity-60"
                       >
-                        Verify
+                        {t("profile.verify")}
                       </button>
                     </div>
                     <button
@@ -425,10 +435,11 @@ export default function ProfileClient() {
                         setOtpCode("");
                         setOtpPhone("");
                         setVerifyMessage(null);
+                        setVerifyTone(null);
                       }}
                       className="text-xs text-amber-700 hover:text-[#FF6321] underline"
                     >
-                      Change number / resend
+                      {t("profile.changeNumber")}
                     </button>
                   </>
                 )}
@@ -436,9 +447,7 @@ export default function ProfileClient() {
                 {verifyMessage && (
                   <p
                     className={`text-sm font-medium ${
-                      verifyMessage.includes("verified") || verifyMessage.includes("sent")
-                        ? "text-emerald-700"
-                        : "text-red-600"
+                      verifyTone === "success" ? "text-emerald-700" : "text-red-600"
                     }`}
                   >
                     {verifyMessage}
@@ -451,24 +460,26 @@ export default function ProfileClient() {
           {wallet?.phone_verified && wallet.balance_expires_at && (
             <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
               <CheckCircle size={14} className="text-emerald-500" />
-              Balance valid until {new Date(wallet.balance_expires_at).toLocaleDateString()}
-              {isBalanceExpired(wallet.balance_expires_at) && " (expired)"}
+              {t("profile.balanceValidUntil", {
+                date: new Date(wallet.balance_expires_at).toLocaleDateString(),
+              })}
+              {isBalanceExpired(wallet.balance_expires_at) && ` ${t("profile.expired")}`}
             </p>
           )}
 
-          <p className="text-xs text-gray-400 mt-3">Top-up coming soon — contact support for manual credits.</p>
+          <p className="text-xs text-gray-400 mt-3">{t("profile.topUpSoon")}</p>
         </div>
 
         <form onSubmit={handleSave} className="p-8 space-y-6">
           <div>
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <User size={16} /> Full Name
+              <User size={16} /> {t("auth.fullName")}
             </label>
             <input
               type="text"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              placeholder="Your full name"
+              placeholder={t("profile.fullNamePlaceholder")}
               className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#FF6321]"
               required
             />
@@ -476,7 +487,7 @@ export default function ProfileClient() {
 
           <div>
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <Phone size={16} /> Phone Number
+              <Phone size={16} /> {t("auth.phone")}
             </label>
             {wallet?.phone_verified ? (
               <input
@@ -489,15 +500,14 @@ export default function ProfileClient() {
               />
             ) : (
               <p className="text-sm text-gray-500 p-3 border border-gray-100 rounded-xl bg-gray-50">
-                Verify your phone above to unlock wallet balance. Your number will appear here after
-                verification.
+                {t("profile.verifyPhoneHint")}
               </p>
             )}
           </div>
 
           <div>
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <Mail size={16} /> Email
+              <Mail size={16} /> {t("auth.email")}
             </label>
             <input
               type="email"
@@ -505,7 +515,7 @@ export default function ProfileClient() {
               disabled
               className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
             />
-            <p className="text-xs text-gray-400 mt-1">Email cannot be changed here.</p>
+            <p className="text-xs text-gray-400 mt-1">{t("profile.emailLocked")}</p>
           </div>
 
           <button
@@ -513,16 +523,16 @@ export default function ProfileClient() {
             disabled={saving}
             className="w-full bg-[#FF6321] text-white font-bold py-3 rounded-xl hover:bg-[#e85a1e] transition-colors disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? t("profile.saving") : t("profile.saveChanges")}
           </button>
         </form>
 
         <div className="px-8 pb-8 flex flex-wrap gap-3">
           <Link href="/my-ads" prefetch={false} className="text-sm font-bold text-[#FF6321] hover:underline">
-            My Ads →
+            {t("profile.myAdsLink")}
           </Link>
           <Link href="/favorites" prefetch={false} className="text-sm font-bold text-gray-600 hover:text-[#FF6321]">
-            Favorites →
+            {t("profile.favoritesLink")}
           </Link>
         </div>
       </div>

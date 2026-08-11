@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Cairo } from "next/font/google";
+import { Geist, Geist_Mono, Almarai } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
@@ -17,10 +17,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const cairo = Cairo({
-  variable: "--font-cairo",
-  subsets: ["arabic", "latin"],
-  weight: ["400", "600", "700", "900"],
+const almarai = Almarai({
+  variable: "--font-almarai",
+  subsets: ["arabic"],
+  weight: ["400", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -42,7 +42,7 @@ export default function RootLayout({
       lang="en"
       dir="ltr"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} antialiased m-0 p-0`}
+      className={`${geistSans.variable} ${geistMono.variable} ${almarai.variable} antialiased m-0 p-0`}
     >
       <head>
         <script

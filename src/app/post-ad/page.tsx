@@ -13,9 +13,11 @@ import {
   WELCOME_FREE_ADS,
   checkCanPostAd,
   consumeAdCredit,
-  formatWalletError,
 } from "@/lib/wallet";
 import { cleanAdAttributes } from "@/lib/utils";
+import { useTranslation } from "@/i18n/LocaleProvider";
+import { localizedMainCategoryName, localizedSubCategoryName } from "@/i18n/catalog";
+import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
 
 export default function PostAdPage() {
   const router = useRouter();
@@ -29,6 +31,7 @@ export default function PostAdPage() {
   const [sellerPhone, setSellerPhone] = useState("");
   const [postCheck, setPostCheck] = useState<CanPostResult | null>(null);
   const [checkingCredits, setCheckingCredits] = useState(true);
+  const { t, locale } = useTranslation();
 
   const [makes, setMakes] = useState<{ id: number; name: string }[]>([]);
   const [loadingMakes, setLoadingMakes] = useState(false);
@@ -86,11 +89,11 @@ export default function PostAdPage() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("You must be logged in to post an ad.");
+      if (!user) throw new Error(t("postAd.mustLogin"));
 
       const canPost = await checkCanPostAd(supabase, user.id);
       if (!canPost.ok) {
-        throw new Error(formatWalletError(canPost.error));
+        throw new Error(formatWalletErrorLocalized(canPost.error, t));
       }
 
       const uploadedUrls = [];
@@ -123,19 +126,19 @@ export default function PostAdPage() {
         .select("id")
         .single();
 
-      if (insertError || !ad) throw insertError || new Error("Failed to create ad");
+      if (insertError || !ad) throw insertError || new Error(t("postAd.createFailed"));
 
       const consumed = await consumeAdCredit(supabase, ad.id);
       if (!consumed.ok) {
         await supabase.from("ads").delete().eq("id", ad.id);
-        throw new Error(formatWalletError(consumed.error));
+        throw new Error(formatWalletErrorLocalized(consumed.error, t));
       }
 
-      alert("Ad submitted for approval!");
+      alert(t("postAd.submitted"));
       router.push("/my-ads");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
-      alert("Error: " + message);
+      const message = err instanceof Error ? err.message : t("postAd.somethingWrong");
+      alert(t("postAd.errorPrefix") + message);
     } finally {
       setUploading(false);
     }
@@ -145,18 +148,18 @@ export default function PostAdPage() {
     if (checkingCredits) {
       return (
         <div className="mb-6 p-4 rounded-xl bg-gray-50 border text-sm text-gray-500 text-center">
-          Checking your ad credits…
+          {t("postAd.checkingCredits")}
         </div>
       );
     }
     if (!postCheck?.ok) {
       return (
         <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-900">
-          <p className="font-bold mb-1">Cannot post yet</p>
-          <p>{formatWalletError(postCheck?.error)}</p>
+          <p className="font-bold mb-1">{t("postAd.cannotPost")}</p>
+          <p>{formatWalletErrorLocalized(postCheck?.error, t)}</p>
           {postCheck?.error === "phone_not_verified" && (
             <Link href="/profile" className="inline-block mt-2 font-bold text-[#FF6321] underline">
-              Verify phone to unlock wallet balance →
+              {t("postAd.verifyPhoneLink")}
             </Link>
           )}
         </div>
@@ -165,23 +168,23 @@ export default function PostAdPage() {
     if (postCheck.type === "admin_waiver") {
       return (
         <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
-          Admin account — posting is free.
+          {t("postAd.adminFree")}
         </div>
       );
     }
     if (postCheck.type === "free_ad") {
       return (
         <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 text-sm text-gray-700">
-          This ad will use <strong>1 free ad</strong> ({postCheck.free_ads_remaining} free remaining).
+          {t("postAd.useFreeAd", { remaining: postCheck.free_ads_remaining ?? 0 })}
           {typeof postCheck.balance === "number" && postCheck.balance > 0 && (
-            <span> Balance: {postCheck.balance} EGP.</span>
+            <span>{t("postAd.balanceLeft", { balance: postCheck.balance })}</span>
           )}
         </div>
       );
     }
     return (
       <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 text-sm text-gray-700">
-        This ad costs <strong>{AD_POST_PRICE_EGP} EGP</strong> from your balance ({postCheck.balance} EGP left).
+        {t("postAd.costsFromBalance", { price: AD_POST_PRICE_EGP, balance: postCheck.balance ?? 0 })}
       </div>
     );
   };
@@ -190,12 +193,15 @@ export default function PostAdPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white shadow-xl rounded-2xl my-10 border border-gray-100">
-      <h1 className="text-3xl font-bold text-gray-800 mb-4 text-center">Post Your Ad</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-4 text-center">{t("postAd.title")}</h1>
       <p className="text-center text-sm text-gray-500 mb-6">
-        Standard ad: {AD_POST_PRICE_EGP} EGP · New users get {WELCOME_FREE_ADS} free ads · Verify
-        phone for {WELCOME_BALANCE_EGP} EGP wallet balance ·{" "}
+        {t("postAd.pricingHint", {
+          price: AD_POST_PRICE_EGP,
+          freeAds: WELCOME_FREE_ADS,
+          welcomeBalance: WELCOME_BALANCE_EGP,
+        })}{" "}
         <Link href="/pricing" className="text-[#FF6321] font-bold hover:underline">
-          Full price list
+          {t("postAd.fullPriceList")}
         </Link>
       </p>
 
@@ -204,7 +210,7 @@ export default function PostAdPage() {
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gray-50 rounded-xl">
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-600 uppercase">Main Category</label>
+            <label className="text-sm font-bold text-gray-600 uppercase">{t("postAd.mainCategory")}</label>
             <select
               value={mainCategory}
               onChange={(e) => {
@@ -213,17 +219,17 @@ export default function PostAdPage() {
               }}
               className="w-full p-4 border rounded-lg bg-white"
             >
-              <option value="">Select Main Category</option>
+              <option value="">{t("postAd.selectMain")}</option>
               {CATEGORY_CONFIG.map((cat) => (
                 <option key={cat.slug} value={cat.slug}>
-                  {cat.name}
+                  {localizedMainCategoryName(cat.slug, locale)}
                 </option>
               ))}
             </select>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-600 uppercase">Sub-category</label>
+            <label className="text-sm font-bold text-gray-600 uppercase">{t("postAd.subCategory")}</label>
             <select
               value={category}
               disabled={!mainCategory}
@@ -233,16 +239,12 @@ export default function PostAdPage() {
               }}
               className="w-full p-4 border rounded-lg bg-white"
             >
-              <option value="">Select Sub-category</option>
-              {subCategories.map((subSlug) => {
-                const mainCat = CATEGORY_CONFIG.find((c) => c.slug === mainCategory);
-                const sub = mainCat?.subs.find((s) => s.slug === subSlug);
-                return (
-                  <option key={subSlug} value={subSlug}>
-                    {sub ? sub.name : subSlug}
-                  </option>
-                );
-              })}
+              <option value="">{t("postAd.selectSub")}</option>
+              {subCategories.map((subSlug) => (
+                <option key={subSlug} value={subSlug}>
+                  {localizedSubCategoryName(subSlug, locale)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -250,7 +252,7 @@ export default function PostAdPage() {
         {category && (
           <div className="p-6 bg-orange-50 rounded-xl border border-orange-100">
             <h3 className="font-bold text-orange-800 mb-4 uppercase text-sm tracking-widest">
-              Specific Details
+              {t("postAd.specificDetails")}
             </h3>
             <DynamicAttributes
               category={category}
@@ -263,10 +265,10 @@ export default function PostAdPage() {
         )}
 
         <div className="space-y-4">
-          <label className="block text-lg font-semibold text-gray-700">Title</label>
+          <label className="block text-lg font-semibold text-gray-700">{t("postAd.titleLabel")}</label>
           <input
             type="text"
-            placeholder="What are you selling?"
+            placeholder={t("postAd.titlePlaceholder")}
             className="w-full p-4 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             required
@@ -274,7 +276,7 @@ export default function PostAdPage() {
         </div>
 
         <div className="space-y-4">
-          <label className="block text-lg font-semibold text-gray-700">Photos</label>
+          <label className="block text-lg font-semibold text-gray-700">{t("postAd.photos")}</label>
           <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-orange-500 transition cursor-pointer relative bg-gray-50">
             <input
               type="file"
@@ -284,7 +286,7 @@ export default function PostAdPage() {
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
             <p className="text-gray-500 font-medium">
-              {images.length > 0 ? `${images.length} images selected` : "Click to upload photos"}
+              {images.length > 0 ? t("postAd.imagesSelected", { count: images.length }) : t("postAd.uploadPhotos")}
             </p>
           </div>
         </div>
@@ -292,14 +294,14 @@ export default function PostAdPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input
             type="number"
-            placeholder="Price (EGP)"
+            placeholder={t("postAd.pricePlaceholder")}
             className="w-full p-4 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
             onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
             required
           />
           <input
             type="text"
-            placeholder="Location (e.g. Maadi, Cairo)"
+            placeholder={t("postAd.locationPlaceholder")}
             className="w-full p-4 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             required
@@ -307,7 +309,7 @@ export default function PostAdPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-lg font-semibold text-gray-700">Contact Phone</label>
+          <label className="block text-lg font-semibold text-gray-700">{t("postAd.contactPhone")}</label>
           <input
             type="tel"
             placeholder="01XXXXXXXXX"
@@ -319,7 +321,7 @@ export default function PostAdPage() {
         </div>
 
         <textarea
-          placeholder="Detailed description..."
+          placeholder={t("postAd.descriptionPlaceholder")}
           rows={4}
           className="w-full p-4 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -334,7 +336,7 @@ export default function PostAdPage() {
               : "bg-orange-600 hover:bg-orange-700 hover:shadow-lg active:scale-95"
           }`}
         >
-          {uploading ? "Publishing..." : "Post Ad Now"}
+          {uploading ? t("postAd.publishing") : t("postAd.postNow")}
         </button>
       </form>
     </div>

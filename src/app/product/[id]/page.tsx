@@ -6,6 +6,13 @@ import { supabase } from "@/lib/supabase";
 import { Phone, MessageCircle, MapPin } from "lucide-react";
 import AdCard from "@/components/AdCard";
 import { extractSpecs, formatPhoneForLink, cleanAdAttributes } from "@/lib/utils";
+import { useTranslation } from "@/i18n/LocaleProvider";
+import {
+  formatAttributeValue,
+  getAttributeLabelForKey,
+  localizedAttributeLabel,
+  localizedSubCategoryName,
+} from "@/i18n/catalog";
 
 export default function ProductPage() {
   const params = useParams();
@@ -17,6 +24,7 @@ export default function ProductPage() {
   // NEW: Maps for name lookup
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
+  const { t, locale } = useTranslation();
 
   useEffect(() => {
     const fetchFullData = async () => {
@@ -54,14 +62,14 @@ export default function ProductPage() {
     fetchFullData();
   }, [params.id]);
 
-  if (loading) return <div className="min-h-[60vh] flex items-center justify-center">Loading...</div>;
-  if (!ad) return <div className="min-h-[60vh] flex items-center justify-center">Ad Not Found</div>;
+  if (loading) return <div className="min-h-[60vh] flex items-center justify-center">{t("common.loading")}</div>;
+  if (!ad) return <div className="min-h-[60vh] flex items-center justify-center">{t("product.notFound")}</div>;
 
-  // Helper to get readable attribute values
-  const getAttributeDisplay = (key: string, value: any) => {
-    if (key === 'make_id') return { label: 'Make', val: makesMap[Number(value)] || value };
-    if (key === 'model_id') return { label: 'Model', val: modelsMap[Number(value)] || value };
-    return { label: key.replace('_', ' '), val: String(value) };
+  const getAttributeDisplay = (key: string, value: unknown) => {
+    const enLabel = getAttributeLabelForKey(ad.category_slug, key);
+    const label = localizedAttributeLabel(enLabel, locale);
+    const val = formatAttributeValue(value, locale, t, key, makesMap, modelsMap);
+    return { label, val };
   };
 
   const phoneLink = ad.seller_phone ? formatPhoneForLink(ad.seller_phone) : null;
@@ -84,18 +92,18 @@ export default function ProductPage() {
             </div>
 
             <div className="rounded-3xl bg-white p-8 shadow-sm border border-gray-100 space-y-6">
-              <h2 className="text-2xl font-bold">Description</h2>
+              <h2 className="text-2xl font-bold">{t("product.description")}</h2>
               <p className="text-gray-600 whitespace-pre-wrap">{ad.description}</p>
               
               {ad.attributes && Object.keys(cleanAdAttributes(ad.attributes)).length > 0 && (
                 <div className="border-t pt-6">
-                    <h3 className="font-bold text-gray-900 mb-4">Specifications</h3>
+                    <h3 className="font-bold text-gray-900 mb-4">{t("product.specifications")}</h3>
                     <div className="grid grid-cols-2 gap-4">
                         {Object.entries(cleanAdAttributes(ad.attributes)).map(([key, value]) => {
                           const { label, val } = getAttributeDisplay(key, value);
                           return (
                             <div key={key} className="bg-gray-50 p-3 rounded-lg">
-                                <span className="block text-xs text-gray-500 capitalize">{label}</span>
+                                <span className="block text-xs text-gray-500">{label}</span>
                                 <span className="font-semibold">{val}</span>
                             </div>
                           );
@@ -108,8 +116,13 @@ export default function ProductPage() {
 
           <div className="space-y-6">
             <div className="rounded-3xl bg-white p-8 shadow-sm border border-gray-100 sticky top-24">
-              <h1 className="text-4xl font-black text-[#FF6321] mb-2">EGP {Number(ad.price).toLocaleString()}</h1>
+              <h1 className="text-4xl font-black text-[#FF6321] mb-2">{t("common.egp")} {Number(ad.price).toLocaleString()}</h1>
               <h2 className="text-2xl font-bold mb-4">{ad.title}</h2>
+              {ad.category_slug && (
+                <p className="text-xs font-bold text-[#FF6321] uppercase mb-2">
+                  {localizedSubCategoryName(ad.category_slug, locale)}
+                </p>
+              )}
               
               <div className="flex items-center gap-2 text-gray-500 mb-6">
                 <MapPin size={18} /> {ad.location}
@@ -119,14 +132,14 @@ export default function ProductPage() {
                 {phoneLink ? (
                   <>
                     <a href={`tel:+${phoneLink}`} className="w-full flex items-center justify-center gap-3 bg-[#FF6321] py-4 rounded-2xl font-bold text-white hover:bg-[#e85a1e]">
-                      <Phone size={20} /> Call Seller
+                      <Phone size={20} /> {t("product.callSeller")}
                     </a>
                     <a href={`https://wa.me/${phoneLink}`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-3 border-2 border-[#FF6321] py-4 rounded-2xl font-bold text-[#FF6321] hover:bg-orange-50">
-                      <MessageCircle size={20} /> WhatsApp
+                      <MessageCircle size={20} /> {t("product.whatsapp")}
                     </a>
                   </>
                 ) : (
-                  <p className="text-center text-sm text-gray-500 py-4">Contact phone not available for this listing.</p>
+                  <p className="text-center text-sm text-gray-500 py-4">{t("product.noPhone")}</p>
                 )}
               </div>
             </div>
@@ -135,7 +148,7 @@ export default function ProductPage() {
 
         {relatedAds.length > 0 && (
         <div className="mt-16">
-          <h2 className="text-2xl font-bold mb-8">Related Items</h2>
+          <h2 className="text-2xl font-bold mb-8">{t("product.relatedItems")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {relatedAds.map(item => (
               <AdCard 

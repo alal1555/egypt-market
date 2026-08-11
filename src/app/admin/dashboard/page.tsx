@@ -4,6 +4,9 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { computeExpiresAt } from "@/constants/adPricing";
+import { useTranslation } from "@/i18n/LocaleProvider";
+import { adminAr } from "@/i18n/content/admin.ar";
+import { adminEn } from "@/i18n/content/admin.en";
 import { Shield, Trash2, CheckCircle, Users, FileText, UserPlus, UserMinus, Crown, AlertCircle, ChevronDown, ChevronUp, MapPin, Tag, Hourglass, Eye, Ban } from "lucide-react";
 
 interface Ad {
@@ -34,6 +37,8 @@ export default function AdminDashboard() {
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [expandedAdId, setExpandedAdId] = useState<string | null>(null);
   const router = useRouter();
+  const { locale, t } = useTranslation();
+  const c = locale === "ar" ? adminAr : adminEn;
 
   useEffect(() => {
     async function verifyAdminAndFetchAll() {
@@ -81,9 +86,9 @@ export default function AdminDashboard() {
   const handleUpdateStatus = async (id: string, newStatus: "active" | "banned") => {
     let message = "";
     if (newStatus === "banned") {
-      message = "Are you sure you want to REJECT / BAN this listing?";
+      message = c.confirmBan;
     } else {
-      message = "Are you sure you want to APPROVE this listing and publish it LIVE?";
+      message = c.confirmApprove;
     }
 
     const confirmAction = window.confirm(message);
@@ -102,7 +107,7 @@ export default function AdminDashboard() {
       .eq("id", id);
 
     if (error) {
-      alert(`Database Rejection Error:\n\nMessage: ${error.message}`);
+      alert(c.dbError.replace("{message}", error.message));
     } else {
       setAds((prev) =>
         prev.map((ad) => (ad.id === id ? { ...ad, ...updates } : ad))
@@ -116,12 +121,12 @@ export default function AdminDashboard() {
 
   const handleUpdateUserRole = async (userId: string, newRole: "admin" | "user" | "super") => {
     if (currentRole !== "super") {
-      alert("Access Denied: Only the Super Admin can alter user security clearances!");
+      alert(c.accessDenied);
       return;
     }
 
     const confirmChange = window.confirm(
-      `Are you sure you want to change this user's access level to ${newRole.toUpperCase()}?`
+      c.confirmRoleChange.replace("{role}", newRole.toUpperCase()),
     );
     if (!confirmChange) return;
 
@@ -137,16 +142,16 @@ export default function AdminDashboard() {
         }
         return [...prev, { id: userId, role: newRole }];
       });
-      alert("Access clearance updated successfully!");
+      alert(c.roleUpdated);
     } else {
-      alert("Error updating role: " + error.message);
+      alert(c.roleUpdateError.replace("{message}", error.message));
     }
   };
 
   const displayedAds = ads.filter((ad) => ad.status === adFilter);
 
   if (loading || !currentRole) {
-    return <div className="text-center py-20 font-medium text-gray-500">Checking credentials...</div>;
+    return <div className="text-center py-20 font-medium text-gray-500">{c.checkingCredentials}</div>;
   }
 
   return (
@@ -162,11 +167,11 @@ export default function AdminDashboard() {
           )}
           <div>
             <h1 className="text-2xl font-black text-gray-900">
-              Yaddii {currentRole === "super" ? "Supreme Command" : "Control Center"}
+              {locale === "ar"
+                ? (currentRole === "super" ? c.titleSuper : c.titleAdmin)
+                : `Yaddii ${currentRole === "super" ? c.titleSuper : c.titleAdmin}`}
             </h1>
-            <p className="text-xs text-gray-400">
-              Pre-Approval deep inspection workspace
-            </p>
+            <p className="text-xs text-gray-400">{c.subtitle}</p>
           </div>
         </div>
 
@@ -178,7 +183,7 @@ export default function AdminDashboard() {
             }`}
           >
             <FileText size={14} />
-            Ads Review
+            {c.tabAds}
           </button>
           
           {currentRole === "super" && (
@@ -189,7 +194,7 @@ export default function AdminDashboard() {
               }`}
             >
               <Users size={14} />
-              Users & Roles
+              {c.tabUsers}
             </button>
           )}
         </div>
@@ -210,7 +215,7 @@ export default function AdminDashboard() {
               }`}
             >
               <Hourglass size={14} />
-              Pending Approval ({ads.filter(a => a.status === 'pending').length})
+              {c.filterPending} ({ads.filter(a => a.status === 'pending').length})
             </button>
 
             <button
@@ -222,7 +227,7 @@ export default function AdminDashboard() {
               }`}
             >
               <Eye size={14} />
-              Live Marketplace ({ads.filter(a => a.status === 'active').length})
+              {c.filterActive} ({ads.filter(a => a.status === 'active').length})
             </button>
 
             <button
@@ -234,7 +239,7 @@ export default function AdminDashboard() {
               }`}
             >
               <Ban size={14} />
-              Banned Entries ({ads.filter(a => a.status === 'banned').length})
+              {c.filterBanned} ({ads.filter(a => a.status === 'banned').length})
             </button>
           </div>
 
@@ -242,17 +247,17 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
             {displayedAds.length === 0 ? (
               <div className="text-center py-16 text-gray-400 text-sm font-medium">
-                No advertisements found matching this category context.
+                {c.noAds}
               </div>
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100 text-xs font-black uppercase tracking-wider text-gray-400">
                     <th className="p-4 w-8"></th>
-                    <th className="p-4">Title</th>
-                    <th className="p-4">Price</th>
-                    <th className="p-4">Location</th>
-                    <th className="p-4 text-right">Actions</th>
+                    <th className="p-4">{c.colTitle}</th>
+                    <th className="p-4">{c.colPrice}</th>
+                    <th className="p-4">{c.colLocation}</th>
+                    <th className="p-4 text-right">{c.colActions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
@@ -270,7 +275,7 @@ export default function AdminDashboard() {
                             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </td>
                           <td className="p-4 font-bold text-gray-900 max-w-xs truncate">{ad.title}</td>
-                          <td className="p-4 text-[#FF6321] font-extrabold">{ad.price} EGP</td>
+                          <td className="p-4 text-[#FF6321] font-extrabold">{ad.price} {t("common.egp")}</td>
                           <td className="p-4 text-gray-500">{ad.location}</td>
                           
                           {/* SMART BUTTON CONTROLS */}
@@ -281,13 +286,13 @@ export default function AdminDashboard() {
                                   onClick={() => handleUpdateStatus(ad.id, "active")}
                                   className="bg-green-600 hover:bg-green-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs"
                                 >
-                                  Approve
+                                  {c.approve}
                                 </button>
                                 <button
                                   onClick={() => handleUpdateStatus(ad.id, "banned")}
                                   className="bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs px-3 py-1.5 rounded-lg transition"
                                 >
-                                  Reject
+                                  {c.reject}
                                 </button>
                               </>
                             )}
@@ -296,7 +301,7 @@ export default function AdminDashboard() {
                                 onClick={() => handleUpdateStatus(ad.id, "banned")}
                                 className="bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs px-3 py-1.5 rounded-lg transition"
                               >
-                                Ban Ad
+                                {c.banAd}
                               </button>
                             )}
                             {ad.status === "banned" && (
@@ -304,7 +309,7 @@ export default function AdminDashboard() {
                                 onClick={() => handleUpdateStatus(ad.id, "active")}
                                 className="bg-green-50 hover:bg-green-100 text-green-600 font-bold text-xs px-3 py-1.5 rounded-lg transition"
                               >
-                                Restore
+                                {c.restore}
                               </button>
                             )}
                           </td>
@@ -318,9 +323,9 @@ export default function AdminDashboard() {
                                 
                                 <div className="space-y-4">
                                   <div>
-                                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Listing Description</h4>
+                                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">{c.listingDescription}</h4>
                                     <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-xl border border-gray-100 shadow-2xs">
-                                      {ad.description || "No content summary provided for this advertisement listing."}
+                                      {ad.description || c.noDescription}
                                     </p>
                                   </div>
                                   
@@ -329,19 +334,19 @@ export default function AdminDashboard() {
                                       <MapPin size={12} className="text-gray-400" /> {ad.location}
                                     </span>
                                     <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
-                                      <Tag size={12} className="text-orange-500" /> {ad.price} EGP
+                                      <Tag size={12} className="text-orange-500" /> {ad.price} {t("common.egp")}
                                     </span>
                                     {ad.expires_at && ad.status === "active" && (
                                       <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
                                         <Hourglass size={12} className="text-gray-400" />
-                                        Live until {new Date(ad.expires_at).toLocaleDateString()}
+                                        {c.liveUntil.replace("{date}", new Date(ad.expires_at!).toLocaleDateString())}
                                       </span>
                                     )}
                                   </div>
                                 </div>
 
                                 <div>
-                                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">Image Attachments Gallery</h4>
+                                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">{c.imageGallery}</h4>
                                   {ad.images && ad.images.length > 0 ? (
                                     <div className="grid grid-cols-3 gap-2">
                                       {ad.images.map((imgUrl, idx) => (
@@ -362,7 +367,7 @@ export default function AdminDashboard() {
                                     </div>
                                   ) : (
                                     <div className="text-xs text-gray-400 border border-dashed rounded-xl p-6 text-center bg-white">
-                                      No media files or photographs attached to this post entry.
+                                      {c.noImages}
                                     </div>
                                   )}
                                 </div>
@@ -385,9 +390,9 @@ export default function AdminDashboard() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-xs font-black uppercase tracking-wider text-gray-400">
-                <th className="p-4">User Identifier (UUID)</th>
-                <th className="p-4">Current Clearance Role</th>
-                <th className="p-4 text-right">Access Controls</th>
+                <th className="p-4">{c.colUserId}</th>
+                <th className="p-4">{c.colRole}</th>
+                <th className="p-4 text-right">{c.colAccess}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm text-gray-700">
@@ -404,7 +409,7 @@ export default function AdminDashboard() {
                   </td>
                   <td className="p-4 text-right">
                     {profileItem.role === "super" ? (
-                      <span className="text-xs text-gray-400 font-medium italic pr-4">Creator Tier</span>
+                      <span className="text-xs text-gray-400 font-medium italic pr-4">{c.creatorTier}</span>
                     ) : (
                       <>
                         {profileItem.role !== "admin" ? (
@@ -414,7 +419,7 @@ export default function AdminDashboard() {
                             className="inline-flex items-center gap-1 bg-orange-50 hover:bg-orange-100 text-[#FF6321] disabled:opacity-50 font-bold text-xs px-3 py-1.5 rounded-lg transition"
                           >
                             <UserPlus size={13} />
-                            Make Admin
+                            {c.makeAdmin}
                           </button>
                         ) : (
                           <button
@@ -423,7 +428,7 @@ export default function AdminDashboard() {
                             className="inline-flex items-center gap-1 bg-gray-50 hover:bg-gray-100 text-gray-500 disabled:opacity-50 font-bold text-xs px-3 py-1.5 rounded-lg transition"
                           >
                             <UserMinus size={13} />
-                            Demote to User
+                            {c.demoteUser}
                           </button>
                         )}
                       </>
