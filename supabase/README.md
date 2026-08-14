@@ -26,8 +26,11 @@ In **Supabase Dashboard → SQL Editor**, run in order:
 3. [`wallet.sql`](./wallet.sql) — wallet columns, transactions, credit functions
 4. [`ad-expiry.sql`](./ad-expiry.sql) — listing `expires_at`, 30-day visibility, `renew_ad` RPC
 5. [`top-up.sql`](./top-up.sql) — Paymob wallet top-up + `apply_top_up` RPC
+6. [`schema-alignment.sql`](./schema-alignment.sql) — fix live drift (orphan ads, legacy columns, NOT NULL, duplicate RLS)
 
 If tables already exist, compare columns and add missing ones manually instead of re-running `create table`.
+
+**Existing yaddii project:** run step 6 once to remove legacy Supabase starter policies that exposed all ads/profiles publicly.
 
 ### 3. Storage bucket
 
