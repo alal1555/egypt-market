@@ -27,6 +27,30 @@ function authErrorMessage(body: Record<string, unknown>, status: number): string
   return msg || `Request failed (${status})`;
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new DOMException("Request timed out", "TimeoutError")),
+          ms,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function getAccessToken(): Promise<string> {
+  const { data } = await withTimeout(supabase.auth.getSession(), 8_000);
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Session expired — please log in again.");
+  return token;
+}
+
 /** Direct REST call — avoids supabase-js updateUser hanging while SMS hook runs */
 async function updateAuthUser(
   accessToken: string,
@@ -47,6 +71,77 @@ async function updateAuthUser(
   if (!response.ok) {
     throw new Error(authErrorMessage(resBody, response.status));
   }
+}
+
+/** Direct REST verify — supabase-js verifyOtp can hang with no UI feedback */
+async function verifyPhoneChangeOtp(
+  accessToken: string,
+  phone: string,
+  token: string,
+): Promise<void> {
+  const response = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: supabaseAnonKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      type: "phone_change",
+      phone,
+      token,
+    }),
+    signal: AbortSignal.timeout(25_000),
+  });
+
+  const resBody = (await response.json().catch(() => ({}))) as Record<string, unknown> & {
+    access_token?: string;
+    refresh_token?: string;
+  };
+  if (!response.ok) {
+    throw new Error(authErrorMessage(resBody, response.status));
+  }
+
+  // Refresh session in background — awaiting setSession can hang the UI.
+  if (resBody.access_token && resBody.refresh_token) {
+    void supabase.auth
+      .setSession({
+        access_token: resBody.access_token,
+        refresh_token: resBody.refresh_token,
+      })
+      .catch(() => {});
+  }
+}
+
+type GrantWelcomeResult = {
+  ok?: boolean;
+  error?: string;
+  free_ads_remaining?: number;
+  balance?: number;
+  balance_expires_at?: string | null;
+  already_granted?: boolean;
+};
+
+async function grantWelcomeCredits(accessToken: string): Promise<GrantWelcomeResult> {
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/grant_welcome_credits`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: supabaseAnonKey,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  const resBody = (await response.json().catch(() => ({}))) as GrantWelcomeResult & Record<string, unknown>;
+  if (!response.ok) {
+    throw new Error(authErrorMessage(resBody, response.status));
+  }
+  if (resBody.ok === false && resBody.error) {
+    throw new Error(String(resBody.error));
+  }
+  return resBody;
 }
 
 function isValidEgyptPhone(input: string): boolean {
@@ -193,7 +288,7 @@ export default function ProfileClient() {
 
     setVerifying(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await withTimeout(supabase.auth.getSession(), 8_000);
       if (!session?.access_token) {
         setVerifyMessage(t("profile.sessionExpired"));
         setVerifyTone("error");
@@ -225,32 +320,46 @@ export default function ProfileClient() {
   const handleVerifyOtp = async () => {
     setVerifyMessage(null);
     setVerifyTone(null);
+    const code = otpCode.replace(/\D/g, "");
+    if (code.length < 4) {
+      setVerifyMessage(t("profile.invalidOtp"));
+      setVerifyTone("error");
+      return;
+    }
+
     setVerifying(true);
-    const phone = normalizeEgyptPhone(otpPhone || formData.phone);
-    const { error } = await supabase.auth.verifyOtp({
-      phone,
-      token: otpCode,
-      type: "phone_change",
-    });
-    if (error) {
+    const safetyTimer = window.setTimeout(() => setVerifying(false), 30_000);
+    try {
+      const accessToken = await getAccessToken();
+      const phone = normalizeEgyptPhone(otpPhone || formData.phone);
+      await verifyPhoneChangeOtp(accessToken, phone, code);
+
+      const granted = await grantWelcomeCredits(accessToken);
+      setWallet((prev) => ({
+        free_ads_remaining: granted.free_ads_remaining ?? prev?.free_ads_remaining ?? 0,
+        balance: Number(granted.balance ?? prev?.balance ?? 0),
+        balance_expires_at: granted.balance_expires_at ?? prev?.balance_expires_at ?? null,
+        phone_verified: true,
+        welcome_credits_granted: true,
+      }));
+
+      setOtpSent(false);
+      setOtpCode("");
+      setOtpPhone("");
+      setVerifyMessage(t("profile.phoneVerified", { amount: WELCOME_BALANCE_EGP }));
+      setVerifyTone("success");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "TimeoutError") {
+        setVerifyMessage(t("profile.verifyTimeout"));
+      } else {
+        const message = err instanceof Error ? err.message : t("profile.verifyFailed");
+        setVerifyMessage(message);
+      }
+      setVerifyTone("error");
+    } finally {
+      window.clearTimeout(safetyTimer);
       setVerifying(false);
-      setVerifyMessage(error.message);
-      setVerifyTone("error");
-      return;
     }
-    const { data: granted, error: grantError } = await supabase.rpc("grant_welcome_credits");
-    setVerifying(false);
-    if (grantError) {
-      setVerifyMessage(grantError.message);
-      setVerifyTone("error");
-      return;
-    }
-    if (user) await loadWallet(user.id);
-    setOtpSent(false);
-    setOtpCode("");
-    setOtpPhone("");
-    setVerifyMessage(t("profile.phoneVerified", { amount: WELCOME_BALANCE_EGP }));
-    setVerifyTone("success");
   };
 
   if (loading) {
@@ -422,10 +531,10 @@ export default function ProfileClient() {
                       <button
                         type="button"
                         onClick={handleVerifyOtp}
-                        disabled={verifying || otpCode.length < 4}
+                        disabled={verifying || otpCode.replace(/\D/g, "").length < 4}
                         className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 disabled:opacity-60"
                       >
-                        {t("profile.verify")}
+                        {verifying ? t("profile.verifying") : t("profile.verify")}
                       </button>
                     </div>
                     <button
