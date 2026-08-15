@@ -24,6 +24,8 @@ interface Ad {
 interface Profile {
   id: string;
   role: string;
+  email?: string | null;
+  full_name?: string | null;
   created_at?: string;
 }
 
@@ -212,6 +214,7 @@ function UserAccessControls({
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<"ads" | "users">("ads");
   const [adFilter, setAdFilter] = useState<"pending" | "active" | "banned">("pending");
+  const [userRoleFilter, setUserRoleFilter] = useState<"all" | "user" | "admin" | "super">("all");
   
   const [ads, setAds] = useState<Ad[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -248,13 +251,22 @@ export default function AdminDashboard() {
         .select("id, title, price, location, status, description, images, created_at, expires_at")
         .order("created_at", { ascending: false });
 
-      const { data: userProfiles } = await supabase
-        .from("profiles")
-        .select("id, role")
-        .order("role", { ascending: true });
+      let userProfiles: Profile[] = [];
+      if (profile.role === "super") {
+        const { data: adminUsers, error: usersError } = await supabase.rpc("admin_list_users");
+        if (!usersError && adminUsers) {
+          userProfiles = adminUsers as Profile[];
+        } else {
+          const { data: fallbackProfiles } = await supabase
+            .from("profiles")
+            .select("id, role, email, full_name")
+            .order("role", { ascending: true });
+          userProfiles = (fallbackProfiles || []) as Profile[];
+        }
+      }
 
       setAds(listings || []);
-      setProfiles(userProfiles || []);
+      setProfiles(userProfiles);
       setLoading(false);
     }
 
@@ -331,6 +343,13 @@ export default function AdminDashboard() {
   };
 
   const displayedAds = ads.filter((ad) => ad.status === adFilter);
+  const displayedProfiles =
+    userRoleFilter === "all"
+      ? profiles
+      : profiles.filter((p) => p.role === userRoleFilter);
+
+  const userCount = (role: "user" | "admin" | "super") =>
+    profiles.filter((p) => p.role === role).length;
 
   if (loading || !currentRole) {
     return <div className="text-center py-20 font-medium text-gray-500">{c.checkingCredentials}</div>;
@@ -534,14 +553,54 @@ export default function AdminDashboard() {
         </div>
       ) : (
         /* USER ROLES VIEW */
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <label htmlFor="user-role-filter" className="text-xs font-black uppercase tracking-wider text-gray-500">
+              {c.filterUserRoleLabel}
+            </label>
+            <select
+              id="user-role-filter"
+              value={userRoleFilter}
+              onChange={(e) => setUserRoleFilter(e.target.value as typeof userRoleFilter)}
+              className="w-full sm:w-auto min-w-[220px] text-sm font-bold text-gray-800 bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#FF6321]/40"
+            >
+              <option value="all">
+                {c.filterAllUsers} ({profiles.length})
+              </option>
+              <option value="user">
+                {c.filterUsersOnly} ({userCount("user")})
+              </option>
+              <option value="admin">
+                {c.filterAdminsOnly} ({userCount("admin")})
+              </option>
+              <option value="super">
+                {c.filterSuperOnly} ({userCount("super")})
+              </option>
+            </select>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+          {displayedProfiles.length === 0 ? (
+            <div className="text-center py-16 text-gray-400 text-sm font-medium">
+              {c.noUsers}
+            </div>
+          ) : (
+            <>
           {/* Mobile: cards */}
           <div className="md:hidden divide-y divide-gray-100">
-            {profiles.map((profileItem) => (
+            {displayedProfiles.map((profileItem) => (
               <div key={profileItem.id} className="p-4 space-y-3">
-                <p className="font-mono text-[10px] leading-relaxed font-bold text-gray-600 break-all">
-                  {profileItem.id}
-                </p>
+                <div>
+                  <p className="font-bold text-gray-900 break-all">
+                    {profileItem.email || c.noEmail}
+                  </p>
+                  {profileItem.full_name ? (
+                    <p className="text-sm text-gray-600 mt-0.5">{profileItem.full_name}</p>
+                  ) : null}
+                  <p className="font-mono text-[10px] leading-relaxed text-gray-400 break-all mt-1">
+                    {profileItem.id}
+                  </p>
+                </div>
                 <UserRoleBadge role={profileItem.role} />
                 <UserAccessControls
                   profileItem={profileItem}
@@ -557,17 +616,25 @@ export default function AdminDashboard() {
           <table className="hidden md:table w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-xs font-black uppercase tracking-wider text-gray-400">
-                <th className="p-4">{c.colUserId}</th>
+                <th className="p-4">{c.colEmail}</th>
+                <th className="p-4">{c.colName}</th>
                 <th className="p-4">{c.colRole}</th>
+                <th className="p-4">{c.colUserId}</th>
                 <th className="p-4 text-right">{c.colAccess}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm text-gray-700">
-              {profiles.map((profileItem) => (
+              {displayedProfiles.map((profileItem) => (
                 <tr key={profileItem.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="p-4 font-mono text-xs font-bold text-gray-600">{profileItem.id}</td>
+                  <td className="p-4 font-medium text-gray-900 break-all">
+                    {profileItem.email || c.noEmail}
+                  </td>
+                  <td className="p-4 text-gray-600">{profileItem.full_name || "—"}</td>
                   <td className="p-4">
                     <UserRoleBadge role={profileItem.role} />
+                  </td>
+                  <td className="p-4 font-mono text-[10px] font-bold text-gray-500 break-all max-w-[140px]">
+                    {profileItem.id}
                   </td>
                   <td className="p-4 text-right">
                     <UserAccessControls
@@ -581,6 +648,9 @@ export default function AdminDashboard() {
               ))}
             </tbody>
           </table>
+            </>
+          )}
+        </div>
         </div>
       )}
     </div>

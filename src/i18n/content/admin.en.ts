@@ -23,8 +23,11 @@ export const adminEn = {
   imageGallery: "Image Attachments Gallery",
   noImages: "No media files or photographs attached to this post entry.",
   colUserId: "User Identifier (UUID)",
+  colEmail: "Email",
+  colName: "Name",
   colRole: "Current Clearance Role",
   colAccess: "Access Controls",
+  noEmail: "No email",
   creatorTier: "Creator Tier",
   makeAdmin: "Make Admin",
   demoteUser: "Demote to User",
@@ -38,6 +41,12 @@ export const adminEn = {
   roleSuper: "super",
   roleAdmin: "admin",
   roleUser: "user",
+  filterUserRoleLabel: "Filter by role",
+  filterAllUsers: "All users",
+  filterUsersOnly: "Users",
+  filterAdminsOnly: "Admins",
+  filterSuperOnly: "Super admins",
+  noUsers: "No users match this role filter.",
 };
 
 export type AdminContent = typeof adminEn;
