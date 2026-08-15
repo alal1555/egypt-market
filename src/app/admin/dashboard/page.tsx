@@ -6,8 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { computeExpiresAt } from "@/constants/adPricing";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { adminAr } from "@/i18n/content/admin.ar";
-import { adminEn } from "@/i18n/content/admin.en";
-import { Shield, Trash2, CheckCircle, Users, FileText, UserPlus, UserMinus, Crown, AlertCircle, ChevronDown, ChevronUp, MapPin, Tag, Hourglass, Eye, Ban } from "lucide-react";
+import { adminEn, type AdminContent } from "@/i18n/content/admin.en";
+import { Shield, Users, FileText, UserPlus, UserMinus, Crown, ChevronDown, ChevronUp, MapPin, Tag, Hourglass, Eye, Ban } from "lucide-react";
 
 interface Ad {
   id: string;
@@ -25,6 +25,188 @@ interface Profile {
   id: string;
   role: string;
   created_at?: string;
+}
+
+function AdActionButtons({
+  ad,
+  c,
+  onUpdateStatus,
+  className = "",
+}: {
+  ad: Ad;
+  c: AdminContent;
+  onUpdateStatus: (id: string, status: "active" | "banned") => void;
+  className?: string;
+}) {
+  const btn =
+    "font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs disabled:opacity-50";
+  return (
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      {ad.status === "pending" && (
+        <>
+          <button
+            type="button"
+            onClick={() => onUpdateStatus(ad.id, "active")}
+            className={`${btn} bg-green-600 hover:bg-green-700 text-white`}
+          >
+            {c.approve}
+          </button>
+          <button
+            type="button"
+            onClick={() => onUpdateStatus(ad.id, "banned")}
+            className={`${btn} bg-red-50 hover:bg-red-100 text-red-600 shadow-none`}
+          >
+            {c.reject}
+          </button>
+        </>
+      )}
+      {ad.status === "active" && (
+        <button
+          type="button"
+          onClick={() => onUpdateStatus(ad.id, "banned")}
+          className={`${btn} bg-red-50 hover:bg-red-100 text-red-600 shadow-none`}
+        >
+          {c.banAd}
+        </button>
+      )}
+      {ad.status === "banned" && (
+        <button
+          type="button"
+          onClick={() => onUpdateStatus(ad.id, "active")}
+          className={`${btn} bg-green-50 hover:bg-green-100 text-green-600 shadow-none`}
+        >
+          {c.restore}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function AdExpandedPanel({
+  ad,
+  c,
+  egpLabel,
+}: {
+  ad: Ad;
+  c: AdminContent;
+  egpLabel: string;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+            {c.listingDescription}
+          </h4>
+          <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-xl border border-gray-100 shadow-2xs">
+            {ad.description || c.noDescription}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+          <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
+            <MapPin size={12} className="text-gray-400 shrink-0" /> {ad.location}
+          </span>
+          <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
+            <Tag size={12} className="text-orange-500 shrink-0" /> {ad.price} {egpLabel}
+          </span>
+          {ad.expires_at && ad.status === "active" && (
+            <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
+              <Hourglass size={12} className="text-gray-400 shrink-0" />
+              {c.liveUntil.replace("{date}", new Date(ad.expires_at).toLocaleDateString())}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
+          {c.imageGallery}
+        </h4>
+        {ad.images && ad.images.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2">
+            {ad.images.map((imgUrl, idx) => (
+              <a
+                key={idx}
+                href={imgUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="group block relative overflow-hidden bg-gray-100 rounded-xl border border-gray-200 aspect-square"
+              >
+                <img
+                  src={imgUrl}
+                  alt={`Ad ${idx + 1}`}
+                  className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
+                />
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-gray-400 border border-dashed rounded-xl p-6 text-center bg-white">
+            {c.noImages}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UserRoleBadge({ role }: { role: string }) {
+  return (
+    <span
+      className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
+        role === "super"
+          ? "bg-amber-100 text-amber-800 border border-amber-200"
+          : role === "admin"
+            ? "bg-orange-100 text-orange-800 border border-orange-200"
+            : "bg-gray-100 text-gray-600"
+      }`}
+    >
+      {role}
+    </span>
+  );
+}
+
+function UserAccessControls({
+  profileItem,
+  currentRole,
+  c,
+  onUpdateUserRole,
+}: {
+  profileItem: Profile;
+  currentRole: string;
+  c: AdminContent;
+  onUpdateUserRole: (userId: string, newRole: "admin" | "user" | "super") => void;
+}) {
+  if (profileItem.role === "super") {
+    return <span className="text-xs text-gray-400 font-medium italic">{c.creatorTier}</span>;
+  }
+
+  if (profileItem.role !== "admin") {
+    return (
+      <button
+        type="button"
+        onClick={() => onUpdateUserRole(profileItem.id, "admin")}
+        disabled={currentRole !== "super"}
+        className="inline-flex items-center gap-1 bg-orange-50 hover:bg-orange-100 text-[#FF6321] disabled:opacity-50 font-bold text-xs px-3 py-1.5 rounded-lg transition"
+      >
+        <UserPlus size={13} />
+        {c.makeAdmin}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onUpdateUserRole(profileItem.id, "user")}
+      disabled={currentRole !== "super"}
+      className="inline-flex items-center gap-1 bg-gray-50 hover:bg-gray-100 text-gray-500 disabled:opacity-50 font-bold text-xs px-3 py-1.5 rounded-lg transition"
+    >
+      <UserMinus size={13} />
+      {c.demoteUser}
+    </button>
+  );
 }
 
 export default function AdminDashboard() {
@@ -155,10 +337,10 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-10">
+    <div className="w-full max-w-7xl mx-auto px-4 py-6 md:py-10 pb-4">
       
       {/* HEADER BAR */}
-      <div className="flex items-center justify-between border-b pb-5 mb-8 flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-5 mb-6 md:mb-8 gap-4">
         <div className="flex items-center gap-3">
           {currentRole === "super" ? (
             <Crown className="text-amber-500 animate-pulse" size={30} />
@@ -175,10 +357,10 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
+        <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab("ads")}
-            className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-4 py-2 rounded-lg transition-all ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 sm:px-4 py-2 rounded-lg transition-all ${
               activeTab === "ads" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
             }`}
           >
@@ -189,7 +371,7 @@ export default function AdminDashboard() {
           {currentRole === "super" && (
             <button
               onClick={() => setActiveTab("users")}
-              className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-4 py-2 rounded-lg transition-all ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 sm:px-4 py-2 rounded-lg transition-all ${
                 activeTab === "users" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
               }`}
             >
@@ -205,10 +387,10 @@ export default function AdminDashboard() {
         <div className="space-y-4">
           
           {/* SUB-NAVIGATION FILTER TABS LAYER */}
-          <div className="flex gap-2 border-b border-gray-200 pb-2">
+          <div className="flex gap-2 border-b border-gray-200 pb-2 overflow-x-auto -mx-1 px-1 scrollbar-none">
             <button
               onClick={() => { setAdFilter("pending"); setExpandedAdId(null); }}
-              className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl border transition-all ${
+              className={`shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 sm:px-4 py-2 rounded-xl border transition-all ${
                 adFilter === "pending"
                   ? "bg-amber-50 text-amber-700 border-amber-200 shadow-2xs font-extrabold"
                   : "bg-white text-gray-500 border-gray-100 hover:text-gray-800"
@@ -220,7 +402,7 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => { setAdFilter("active"); setExpandedAdId(null); }}
-              className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl border transition-all ${
+              className={`shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 sm:px-4 py-2 rounded-xl border transition-all ${
                 adFilter === "active"
                   ? "bg-green-50 text-green-700 border-green-200 shadow-2xs font-extrabold"
                   : "bg-white text-gray-500 border-gray-100 hover:text-gray-800"
@@ -232,7 +414,7 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => { setAdFilter("banned"); setExpandedAdId(null); }}
-              className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl border transition-all ${
+              className={`shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 sm:px-4 py-2 rounded-xl border transition-all ${
                 adFilter === "banned"
                   ? "bg-red-50 text-red-700 border-red-200 shadow-2xs font-extrabold"
                   : "bg-white text-gray-500 border-gray-100 hover:text-gray-800"
@@ -250,144 +432,129 @@ export default function AdminDashboard() {
                 {c.noAds}
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100 text-xs font-black uppercase tracking-wider text-gray-400">
-                    <th className="p-4 w-8"></th>
-                    <th className="p-4">{c.colTitle}</th>
-                    <th className="p-4">{c.colPrice}</th>
-                    <th className="p-4">{c.colLocation}</th>
-                    <th className="p-4 text-right">{c.colActions}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
+              <>
+                {/* Mobile: card list */}
+                <div className="md:hidden divide-y divide-gray-100">
                   {displayedAds.map((ad) => {
                     const isExpanded = expandedAdId === ad.id;
                     return (
-                      <React.Fragment key={ad.id}>
-                        
-                        {/* ACCORDION TRIGGER MASTER ROW */}
-                        <tr 
+                      <div key={ad.id} className="p-4">
+                        <button
+                          type="button"
                           onClick={() => toggleExpandAd(ad.id)}
-                          className="hover:bg-gray-50/70 transition-colors cursor-pointer"
+                          className="w-full text-left"
                         >
-                          <td className="p-4 text-gray-400">
-                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                          </td>
-                          <td className="p-4 font-bold text-gray-900 max-w-xs truncate">{ad.title}</td>
-                          <td className="p-4 text-[#FF6321] font-extrabold">{ad.price} {t("common.egp")}</td>
-                          <td className="p-4 text-gray-500">{ad.location}</td>
-                          
-                          {/* SMART BUTTON CONTROLS */}
-                          <td className="p-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                            {ad.status === "pending" && (
-                              <>
-                                <button
-                                  onClick={() => handleUpdateStatus(ad.id, "active")}
-                                  className="bg-green-600 hover:bg-green-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs"
-                                >
-                                  {c.approve}
-                                </button>
-                                <button
-                                  onClick={() => handleUpdateStatus(ad.id, "banned")}
-                                  className="bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs px-3 py-1.5 rounded-lg transition"
-                                >
-                                  {c.reject}
-                                </button>
-                              </>
-                            )}
-                            {ad.status === "active" && (
-                              <button
-                                onClick={() => handleUpdateStatus(ad.id, "banned")}
-                                className="bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs px-3 py-1.5 rounded-lg transition"
-                              >
-                                {c.banAd}
-                              </button>
-                            )}
-                            {ad.status === "banned" && (
-                              <button
-                                onClick={() => handleUpdateStatus(ad.id, "active")}
-                                className="bg-green-50 hover:bg-green-100 text-green-600 font-bold text-xs px-3 py-1.5 rounded-lg transition"
-                              >
-                                {c.restore}
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-gray-900 break-words">{ad.title}</p>
+                              <p className="text-[#FF6321] font-extrabold mt-1">
+                                {ad.price} {t("common.egp")}
+                              </p>
+                              <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                                <MapPin size={12} className="shrink-0" />
+                                {ad.location}
+                              </p>
+                            </div>
+                            <span className="text-gray-400 shrink-0 pt-1">
+                              {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                            </span>
+                          </div>
+                        </button>
 
-                        {/* EXPANDED REVIEW PANEL DRAWER */}
+                        <AdActionButtons
+                          ad={ad}
+                          c={c}
+                          onUpdateStatus={handleUpdateStatus}
+                          className="mt-3"
+                        />
+
                         {isExpanded && (
-                          <tr className="bg-gray-50/60 shadow-inner">
-                            <td colSpan={5} className="p-6 border-l-4 border-orange-500">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                
-                                <div className="space-y-4">
-                                  <div>
-                                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">{c.listingDescription}</h4>
-                                    <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-xl border border-gray-100 shadow-2xs">
-                                      {ad.description || c.noDescription}
-                                    </p>
-                                  </div>
-                                  
-                                  <div className="flex gap-4 text-xs text-gray-500">
-                                    <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
-                                      <MapPin size={12} className="text-gray-400" /> {ad.location}
-                                    </span>
-                                    <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
-                                      <Tag size={12} className="text-orange-500" /> {ad.price} {t("common.egp")}
-                                    </span>
-                                    {ad.expires_at && ad.status === "active" && (
-                                      <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
-                                        <Hourglass size={12} className="text-gray-400" />
-                                        {c.liveUntil.replace("{date}", new Date(ad.expires_at!).toLocaleDateString())}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">{c.imageGallery}</h4>
-                                  {ad.images && ad.images.length > 0 ? (
-                                    <div className="grid grid-cols-3 gap-2">
-                                      {ad.images.map((imgUrl, idx) => (
-                                        <a 
-                                          key={idx} 
-                                          href={imgUrl} 
-                                          target="_blank" 
-                                          rel="noreferrer" 
-                                          className="group block relative overflow-hidden bg-gray-100 rounded-xl border border-gray-200 aspect-square"
-                                        >
-                                          <img 
-                                            src={imgUrl} 
-                                            alt={`Ad Content View ${idx + 1}`}
-                                            className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
-                                          />
-                                        </a>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="text-xs text-gray-400 border border-dashed rounded-xl p-6 text-center bg-white">
-                                      {c.noImages}
-                                    </div>
-                                  )}
-                                </div>
-
-                              </div>
-                            </td>
-                          </tr>
+                          <div className="mt-4 pt-4 border-t border-gray-100 border-l-4 border-orange-500 pl-3">
+                            <AdExpandedPanel ad={ad} c={c} egpLabel={t("common.egp")} />
+                          </div>
                         )}
-                      </React.Fragment>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Desktop: table */}
+                <table className="hidden md:table w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100 text-xs font-black uppercase tracking-wider text-gray-400">
+                      <th className="p-4 w-8"></th>
+                      <th className="p-4">{c.colTitle}</th>
+                      <th className="p-4">{c.colPrice}</th>
+                      <th className="p-4">{c.colLocation}</th>
+                      <th className="p-4 text-right">{c.colActions}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
+                    {displayedAds.map((ad) => {
+                      const isExpanded = expandedAdId === ad.id;
+                      return (
+                        <React.Fragment key={ad.id}>
+                          <tr
+                            onClick={() => toggleExpandAd(ad.id)}
+                            className="hover:bg-gray-50/70 transition-colors cursor-pointer"
+                          >
+                            <td className="p-4 text-gray-400">
+                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            </td>
+                            <td className="p-4 font-bold text-gray-900 max-w-xs truncate">{ad.title}</td>
+                            <td className="p-4 text-[#FF6321] font-extrabold">
+                              {ad.price} {t("common.egp")}
+                            </td>
+                            <td className="p-4 text-gray-500">{ad.location}</td>
+                            <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                              <AdActionButtons
+                                ad={ad}
+                                c={c}
+                                onUpdateStatus={handleUpdateStatus}
+                                className="justify-end"
+                              />
+                            </td>
+                          </tr>
+
+                          {isExpanded && (
+                            <tr className="bg-gray-50/60 shadow-inner">
+                              <td colSpan={5} className="p-6 border-l-4 border-orange-500">
+                                <AdExpandedPanel ad={ad} c={c} egpLabel={t("common.egp")} />
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
             )}
           </div>
         </div>
       ) : (
         /* USER ROLES VIEW */
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-          <table className="w-full text-left border-collapse">
+          {/* Mobile: cards */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {profiles.map((profileItem) => (
+              <div key={profileItem.id} className="p-4 space-y-3">
+                <p className="font-mono text-[10px] leading-relaxed font-bold text-gray-600 break-all">
+                  {profileItem.id}
+                </p>
+                <UserRoleBadge role={profileItem.role} />
+                <UserAccessControls
+                  profileItem={profileItem}
+                  currentRole={currentRole}
+                  c={c}
+                  onUpdateUserRole={handleUpdateUserRole}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <table className="hidden md:table w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-xs font-black uppercase tracking-wider text-gray-400">
                 <th className="p-4">{c.colUserId}</th>
@@ -400,39 +567,15 @@ export default function AdminDashboard() {
                 <tr key={profileItem.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="p-4 font-mono text-xs font-bold text-gray-600">{profileItem.id}</td>
                   <td className="p-4">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
-                      profileItem.role === 'super' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                      profileItem.role === 'admin' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {profileItem.role}
-                    </span>
+                    <UserRoleBadge role={profileItem.role} />
                   </td>
                   <td className="p-4 text-right">
-                    {profileItem.role === "super" ? (
-                      <span className="text-xs text-gray-400 font-medium italic pr-4">{c.creatorTier}</span>
-                    ) : (
-                      <>
-                        {profileItem.role !== "admin" ? (
-                          <button
-                            onClick={() => handleUpdateUserRole(profileItem.id, "admin")}
-                            disabled={currentRole !== "super"}
-                            className="inline-flex items-center gap-1 bg-orange-50 hover:bg-orange-100 text-[#FF6321] disabled:opacity-50 font-bold text-xs px-3 py-1.5 rounded-lg transition"
-                          >
-                            <UserPlus size={13} />
-                            {c.makeAdmin}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleUpdateUserRole(profileItem.id, "user")}
-                            disabled={currentRole !== "super"}
-                            className="inline-flex items-center gap-1 bg-gray-50 hover:bg-gray-100 text-gray-500 disabled:opacity-50 font-bold text-xs px-3 py-1.5 rounded-lg transition"
-                          >
-                            <UserMinus size={13} />
-                            {c.demoteUser}
-                          </button>
-                        )}
-                      </>
-                    )}
+                    <UserAccessControls
+                      profileItem={profileItem}
+                      currentRole={currentRole}
+                      c={c}
+                      onUpdateUserRole={handleUpdateUserRole}
+                    />
                   </td>
                 </tr>
               ))}
