@@ -127,14 +127,15 @@ function TopUpResultContent() {
   );
 }
 
+function LoadingFallback() {
+  const { t } = useTranslation();
+  return <div className="text-center py-16 text-gray-500">{t("walletTopUp.loadingResult")}</div>;
+}
+
 export default function TopUpResultPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-10">
-      <Suspense
-        fallback={
-          <div className="text-center py-16 text-gray-500">{t("walletTopUp.loadingResult")}</div>
-        }
-      >
+      <Suspense fallback={<LoadingFallback />}>
         <TopUpResultContent />
       </Suspense>
     </div>

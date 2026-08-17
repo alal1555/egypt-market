@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback, useRef } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -13,7 +13,6 @@ import { useTranslation } from "@/i18n/LocaleProvider";
 /** Latest active ads shown on home — full catalog lives on /search */
 const HOME_RECENT_LIMIT = 36;
 const FETCH_TIMEOUT_MS = 15_000;
-const LOADING_RETRY_MS = 12_000;
 
 interface Ad {
   id: string; title: string; price: number; location: string; category_slug: string;
@@ -30,65 +29,66 @@ function HomeContent() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
-  const fetchGenRef = useRef(0);
   const { t } = useTranslation();
-
-  const loadHomeData = useCallback(async () => {
-    const gen = ++fetchGenRef.current;
-    setLoading(true);
-    setFetchError(null);
-
-    const timeout = new Promise<never>((_, reject) => {
-      window.setTimeout(() => reject(new Error("Request timed out")), FETCH_TIMEOUT_MS);
-    });
-
-    try {
-      const [adsRes, makesRes, modelsRes] = await Promise.race([
-        Promise.all([
-          supabase
-            .from("ads")
-            .select("*", { count: "exact" })
-            .eq("status", "active")
-            .order("created_at", { ascending: false })
-            .limit(HOME_RECENT_LIMIT),
-          supabase.from("makes").select("id, name"),
-          supabase.from("models").select("id, name"),
-        ]),
-        timeout,
-      ]);
-
-      if (gen !== fetchGenRef.current) return;
-
-      if (adsRes.error) throw adsRes.error;
-      if (makesRes.error) throw makesRes.error;
-      if (modelsRes.error) throw modelsRes.error;
-
-      setAds(adsRes.data ?? []);
-      setTotalActive(adsRes.count ?? adsRes.data?.length ?? 0);
-      if (makesRes.data) {
-        setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
-      }
-      if (modelsRes.data) {
-        setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
-      }
-    } catch (err: unknown) {
-      if (gen !== fetchGenRef.current) return;
-      const message = err instanceof Error ? err.message : "Failed to load listings";
-      setFetchError(message);
-    } finally {
-      if (gen === fetchGenRef.current) setLoading(false);
-    }
-  }, []);
 
   // Refetch when navigating to home, on logo re-click, or after refreshKey bump
   useEffect(() => {
     if (pathname !== "/") return;
 
-    loadHomeData();
-    return () => {
-      fetchGenRef.current += 1;
+    let cancelled = false;
+
+    const loadHomeData = async () => {
+      setLoading(true);
+      setFetchError(null);
+
+      const timeout = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error("Request timed out")), FETCH_TIMEOUT_MS);
+      });
+
+      try {
+        const [adsRes, makesRes, modelsRes] = await Promise.race([
+          Promise.all([
+            supabase
+              .from("ads")
+              .select("*", { count: "exact" })
+              .eq("status", "active")
+              .order("created_at", { ascending: false })
+              .limit(HOME_RECENT_LIMIT),
+            supabase.from("makes").select("id, name"),
+            supabase.from("models").select("id, name"),
+          ]),
+          timeout,
+        ]);
+
+        if (cancelled) return;
+
+        if (adsRes.error) throw adsRes.error;
+        if (makesRes.error) throw makesRes.error;
+        if (modelsRes.error) throw modelsRes.error;
+
+        setAds(adsRes.data ?? []);
+        setTotalActive(adsRes.count ?? adsRes.data?.length ?? 0);
+        if (makesRes.data) {
+          setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
+        }
+        if (modelsRes.data) {
+          setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
+        }
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : "Failed to load listings";
+        setFetchError(message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
-  }, [pathname, refreshKey, loadHomeData]);
+
+    void loadHomeData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, refreshKey]);
 
   // Logo click while already on home
   useEffect(() => {
@@ -105,13 +105,6 @@ function HomeContent() {
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
   }, [pathname]);
-
-  // Recover if a fetch hangs (tab sleep, slow network)
-  useEffect(() => {
-    if (!loading || pathname !== "/") return;
-    const retryTimer = window.setTimeout(() => setRefreshKey((k) => k + 1), LOADING_RETRY_MS);
-    return () => window.clearTimeout(retryTimer);
-  }, [loading, pathname]);
 
   const hasMore = totalActive > ads.length;
   const showFullLoading = loading && ads.length === 0 && !fetchError;

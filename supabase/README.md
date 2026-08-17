@@ -77,103 +77,67 @@ Signup stores metadata in `auth.users`:
 
 Profile page updates these via `supabase.auth.updateUser`.
 
-### 5. Phone auth (wallet welcome credits) — SMS Misr
+### 5. Phone verification (wallet welcome credits) — Akedly
 
-The app sends OTP from **Profile → Ad Credits** via Supabase Auth. Supabase generates the code; [`functions/send-sms/`](./functions/send-sms/) delivers it through **SMS Misr** (Egypt).
+Profile phone verification uses **[Akedly](https://akedly.io)** (WhatsApp-first OTP, SMS fallback). No SMS Misr sender ID required.
 
-**App flow (no Next.js changes):**
+**App flow:**
 
-1. User clicks **Send verification code** → `updateUser({ phone })`
-2. Supabase triggers **Send SMS hook** → Edge Function → SMS Misr OTP API
-3. User enters code → `verifyOtp({ type: "phone_change" })`
-4. `grant_welcome_credits()` → 300 EGP wallet balance (90-day expiry)
+1. User clicks **Send verification code** on Profile
+2. Browser solves Akedly Shield challenge → Next.js API → Akedly sends OTP (WhatsApp preferred)
+3. User enters code → verify API → `grant_welcome_credits()` → 300 EGP wallet balance (90-day expiry)
+4. Phone number saved in `user_metadata.phone_number` (not Supabase Auth phone provider)
 
 New users get **3 free ads on signup**; phone verification unlocks the **300 EGP** balance only.
 
-#### A. SMS Misr console (you)
+#### A. Akedly setup
 
-| Item | Where |
-|------|--------|
-| Username & password | [Client/Settings](https://smsmisr.com/Client/Settings) |
-| Sender token (test) | **Test Sender** — use while `SMSMISR_ENVIRONMENT=2` |
-| Sender token (live) | **Yaddii** — after status = Approved |
-| Template token | OTP / Templates section — **required** for OTP API |
-
-Test sender token (from SMS Misr docs, test env only):
-
-```
-b611afb996655a94c8e942a823f1421de42bf8335d24ba1f84c437b2ab11ca27
-```
-
-Request an OTP template if you have none (e.g. “Your Yaddii verification code is {otp}”).
-
-#### B. Deploy Edge Function
-
-Install [Supabase CLI](https://supabase.com/docs/guides/cli), log in, link project:
+1. Sign up at [akedly.io](https://akedly.io) and create a **pipeline** (V1.2 REST / Shield)
+2. Copy **API Key** and **Pipeline ID** from the dashboard
+3. Add to `.env.local` (and Vercel/hosting env):
 
 ```bash
-supabase login
-supabase link --project-ref YOUR_PROJECT_REF
+AKEDLY_API_KEY="your_api_key"
+AKEDLY_PIPELINE_ID="your_pipeline_id"
 ```
 
-Set secrets (use **Test Sender** + `environment=2` until Yaddii is approved):
+4. Restart `npm run dev`
 
-```bash
-supabase secrets set \
-  SMSMISR_USERNAME="your_username" \
-  SMSMISR_PASSWORD="your_password" \
-  SMSMISR_SENDER="b611afb996655a94c8e942a823f1421de42bf8335d24ba1f84c437b2ab11ca27" \
-  SMSMISR_TEMPLATE="your_template_token" \
-  SMSMISR_ENVIRONMENT="2"
-```
+API routes (server-only keys):
 
-Deploy (hook must run without JWT — see `config.toml`):
+| Route | Purpose |
+|-------|---------|
+| `GET /api/auth/akedly/challenge` | PoW + Turnstile config |
+| `POST /api/auth/akedly/send` | Send OTP (auth required) |
+| `POST /api/auth/akedly/verify` | Verify OTP (auth required) |
 
-```bash
-supabase functions deploy send-sms --no-verify-jwt
-```
+Client uses `@akedly/shield` for PoW/Turnstile before send.
 
-#### C. Supabase Dashboard
+#### B. Supabase Dashboard
 
-1. **Authentication → Providers → Phone** — enable Phone provider
-2. **SMS provider** — choose **Hook** (not Twilio / Textlocal)
-3. **Authentication → Hooks → Send SMS**
-   - Enable hook
-   - URL: `https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-sms`
-   - Generate **hook secret** → set as `SEND_SMS_HOOK_SECRET`:
+- **Phone provider** is **not required** for Akedly flow — you can disable it
+- No Send SMS hook needed when using Akedly
 
-```bash
-supabase secrets set SEND_SMS_HOOK_SECRET="v1,whsec_..."
-```
-
-4. Re-deploy or restart function after adding the secret
-
-#### D. Go live (after Yaddii sender approved)
-
-```bash
-supabase secrets set \
-  SMSMISR_SENDER="your_yaddii_sender_token" \
-  SMSMISR_ENVIRONMENT="1"
-```
-
-#### E. Dev bypass (no SMS)
+#### C. Dev bypass (no OTP)
 
 ```sql
 select public.grant_welcome_credits('USER_UUID');
 ```
 
+#### D. Legacy: SMS Misr (optional)
+
+The repo still includes [`functions/send-sms/`](./functions/send-sms/) for Supabase Auth Phone + SMS Misr if you switch back later. Not used when Akedly env vars are set.
+
 #### Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| Hook 500 / invalid signature | `SEND_SMS_HOOK_SECRET` must match Dashboard hook secret exactly |
-| SMS Misr 4903 | Wrong username/password |
-| SMS Misr 4904 | Invalid sender token |
-| SMS Misr 4909 | Invalid template token — create OTP template in console |
-| SMS Misr 4906 | Insufficient credit — recharge balance |
-| No SMS, no error | Check **Edge Functions → send-sms → Logs** |
+| `akedly_not_configured` | Set `AKEDLY_API_KEY` and `AKEDLY_PIPELINE_ID` in `.env.local` |
+| OTP not on WhatsApp | User may need WhatsApp on that number; Akedly falls back to SMS |
+| Rate limit errors | Wait and retry; check Akedly dashboard |
+| Verify fails | Code expires in ~3 min — request a new one |
 
-Function logs: `supabase functions logs send-sms`
+Docs: [Akedly V1.2 Shield](https://docs.akedly.io/authentication/v1-2)
 
 ### 6. Wallet top-up (Paymob)
 

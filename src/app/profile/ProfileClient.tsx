@@ -5,6 +5,11 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { User, Mail, Phone, Shield, Crown, Calendar, Wallet, Gift, CheckCircle } from "lucide-react";
 import {
+  formatAkedlyChannels,
+  sendAkedlyOtpViaProxy,
+  verifyAkedlyOtpViaProxy,
+} from "@/lib/akedly-client";
+import {
   AD_POST_PRICE_EGP,
   WELCOME_BALANCE_EGP,
   WELCOME_FREE_ADS,
@@ -73,46 +78,6 @@ async function updateAuthUser(
   }
 }
 
-/** Direct REST verify — supabase-js verifyOtp can hang with no UI feedback */
-async function verifyPhoneChangeOtp(
-  accessToken: string,
-  phone: string,
-  token: string,
-): Promise<void> {
-  const response = await fetch(`${supabaseUrl}/auth/v1/verify`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      apikey: supabaseAnonKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      type: "phone_change",
-      phone,
-      token,
-    }),
-    signal: AbortSignal.timeout(25_000),
-  });
-
-  const resBody = (await response.json().catch(() => ({}))) as Record<string, unknown> & {
-    access_token?: string;
-    refresh_token?: string;
-  };
-  if (!response.ok) {
-    throw new Error(authErrorMessage(resBody, response.status));
-  }
-
-  // Refresh session in background — awaiting setSession can hang the UI.
-  if (resBody.access_token && resBody.refresh_token) {
-    void supabase.auth
-      .setSession({
-        access_token: resBody.access_token,
-        refresh_token: resBody.refresh_token,
-      })
-      .catch(() => {});
-  }
-}
-
 type GrantWelcomeResult = {
   ok?: boolean;
   error?: string;
@@ -164,6 +129,8 @@ export default function ProfileClient() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpPhone, setOtpPhone] = useState("");
+  const [transactionReqId, setTransactionReqId] = useState("");
+  const [deliveryChannels, setDeliveryChannels] = useState<string[]>([]);
   const [verifying, setVerifying] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [verifyTone, setVerifyTone] = useState<"success" | "error" | null>(null);
@@ -270,6 +237,8 @@ export default function ProfileClient() {
       setOtpSent(false);
       setOtpCode("");
       setOtpPhone("");
+      setTransactionReqId("");
+      setDeliveryChannels([]);
       setVerifyMessage(t("profile.phoneChanged"));
       setVerifyTone("error");
     }
@@ -278,7 +247,6 @@ export default function ProfileClient() {
   const handleSendOtp = async () => {
     setVerifyMessage(null);
     setVerifyTone(null);
-    const phone = normalizeEgyptPhone(formData.phone);
 
     if (!isValidEgyptPhone(formData.phone)) {
       setVerifyMessage(t("profile.invalidPhoneShort"));
@@ -295,18 +263,24 @@ export default function ProfileClient() {
         return;
       }
 
-      await updateAuthUser(session.access_token, {
-        data: { phone_number: formData.phone },
-        phone,
-      });
+      const sent = await sendAkedlyOtpViaProxy(session.access_token, formData.phone);
 
       setOtpSent(true);
       setOtpPhone(formData.phone.trim());
-      setVerifyMessage(t("profile.codeSent", { phone: formData.phone.trim() }));
+      setTransactionReqId(sent.transactionReqID);
+      setDeliveryChannels(sent.channels);
+      setVerifyMessage(
+        t("profile.codeSentVia", {
+          phone: formData.phone.trim(),
+          channel: formatAkedlyChannels(sent.channels),
+        }),
+      );
       setVerifyTone("success");
     } catch (err) {
       if (err instanceof DOMException && err.name === "TimeoutError") {
         setVerifyMessage(t("profile.otpTimeout"));
+      } else if (err instanceof Error && err.message.includes("akedly_not_configured")) {
+        setVerifyMessage(t("profile.akedlyNotConfigured"));
       } else {
         const message = err instanceof Error ? err.message : t("profile.sendCodeFailed");
         setVerifyMessage(message);
@@ -331,8 +305,17 @@ export default function ProfileClient() {
     const safetyTimer = window.setTimeout(() => setVerifying(false), 30_000);
     try {
       const accessToken = await getAccessToken();
-      const phone = normalizeEgyptPhone(otpPhone || formData.phone);
-      await verifyPhoneChangeOtp(accessToken, phone, code);
+      if (!transactionReqId) {
+        setVerifyMessage(t("profile.resendCode"));
+        setVerifyTone("error");
+        return;
+      }
+
+      await verifyAkedlyOtpViaProxy(accessToken, transactionReqId, code);
+
+      await updateAuthUser(accessToken, {
+        data: { phone_number: formData.phone.trim() },
+      });
 
       const granted = await grantWelcomeCredits(accessToken);
       setWallet((prev) => ({
@@ -346,6 +329,8 @@ export default function ProfileClient() {
       setOtpSent(false);
       setOtpCode("");
       setOtpPhone("");
+      setTransactionReqId("");
+      setDeliveryChannels([]);
       setVerifyMessage(t("profile.phoneVerified", { amount: WELCOME_BALANCE_EGP }));
       setVerifyTone("success");
     } catch (err) {
@@ -496,7 +481,7 @@ export default function ProfileClient() {
                 />
                 {formData.phone.trim() && isValidEgyptPhone(formData.phone) ? (
                   <p className="text-sm text-amber-900">
-                    {t("profile.smsWillSend")}{" "}
+                    {t("profile.otpWillSend")}{" "}
                     <span className="font-bold">{formData.phone.trim()}</span>
                   </p>
                 ) : formData.phone.trim() ? (
@@ -517,7 +502,10 @@ export default function ProfileClient() {
                 ) : (
                   <>
                     <p className="text-xs text-amber-800">
-                      {t("profile.codeSentTo", { phone: otpPhone })}
+                      {t("profile.codeSentVia", {
+                        phone: otpPhone,
+                        channel: formatAkedlyChannels(deliveryChannels),
+                      })}
                     </p>
                     <div className="flex gap-2">
                       <input
@@ -543,6 +531,8 @@ export default function ProfileClient() {
                         setOtpSent(false);
                         setOtpCode("");
                         setOtpPhone("");
+                        setTransactionReqId("");
+                        setDeliveryChannels([]);
                         setVerifyMessage(null);
                         setVerifyTone(null);
                       }}

@@ -44,7 +44,7 @@ Follow **[supabase/README.md](./supabase/README.md)** to:
 
 1. Run `supabase/schema.sql`, `supabase/rls.sql`, and `supabase/wallet.sql` in the SQL Editor
 2. Create the `ad-images` storage bucket
-3. Enable **Phone** auth + deploy **SMS Misr** Send SMS hook (see [supabase/README.md § Phone auth](./supabase/README.md#5-phone-auth-wallet-welcome-credits--sms-misr))
+3. Add **Akedly** keys for phone verification (see [supabase/README.md § Phone verification](./supabase/README.md#5-phone-verification-wallet-welcome-credits--akedly))
 4. Configure auth redirect URLs
 5. Promote your first user to `super` admin
 
