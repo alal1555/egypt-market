@@ -116,7 +116,7 @@ export default function ProductPage() {
 
           <div className="space-y-6">
             <div className="rounded-3xl bg-white p-8 shadow-sm border border-gray-100 sticky top-24">
-              <h1 className="text-4xl font-black text-[#FF6321] mb-2">{t("common.egp")} {Number(ad.price).toLocaleString()}</h1>
+              <h1 className="text-4xl font-black text-[#FF6321] mb-2">{Number(ad.price).toLocaleString()} {t("common.egp")}</h1>
               <h2 className="text-2xl font-bold mb-4">{ad.title}</h2>
               {ad.category_slug && (
                 <p className="text-xs font-bold text-[#FF6321] uppercase mb-2">
