@@ -1,23 +1,20 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
 import CategoryBar from "@/components/CategoryBar";
 import { extractSpecs } from "@/lib/utils";
 import { HOME_REFRESH_EVENT } from "@/lib/home";
+import { fetchHomeFeed, type HomeAd } from "@/lib/home-feed";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
 /** Latest active ads shown on home — full catalog lives on /search */
 const HOME_RECENT_LIMIT = 36;
 const FETCH_TIMEOUT_MS = 15_000;
 
-interface Ad {
-  id: string; title: string; price: number; location: string; category_slug: string;
-  images: string[]; status: string; created_at: string; attributes?: any;
-}
+interface Ad extends HomeAd {}
 
 function HomeContent() {
   const [ads, setAds] = useState<Ad[]>([]);
@@ -29,64 +26,52 @@ function HomeContent() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
+  const loadIdRef = useRef(0);
   const { t } = useTranslation();
 
   // Refetch when navigating to home, on logo re-click, or after refreshKey bump
   useEffect(() => {
     if (pathname !== "/") return;
 
-    let cancelled = false;
+    const loadId = ++loadIdRef.current;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     const loadHomeData = async () => {
       setLoading(true);
       setFetchError(null);
 
-      const timeout = new Promise<never>((_, reject) => {
-        window.setTimeout(() => reject(new Error("Request timed out")), FETCH_TIMEOUT_MS);
-      });
-
       try {
-        const [adsRes, makesRes, modelsRes] = await Promise.race([
-          Promise.all([
-            supabase
-              .from("ads")
-              .select("*", { count: "exact" })
-              .eq("status", "active")
-              .order("created_at", { ascending: false })
-              .limit(HOME_RECENT_LIMIT),
-            supabase.from("makes").select("id, name"),
-            supabase.from("models").select("id, name"),
-          ]),
-          timeout,
-        ]);
+        const data = await fetchHomeFeed({
+          limit: HOME_RECENT_LIMIT,
+          signal: controller.signal,
+        });
 
-        if (cancelled) return;
+        if (loadId !== loadIdRef.current) return;
 
-        if (adsRes.error) throw adsRes.error;
-        if (makesRes.error) throw makesRes.error;
-        if (modelsRes.error) throw modelsRes.error;
-
-        setAds(adsRes.data ?? []);
-        setTotalActive(adsRes.count ?? adsRes.data?.length ?? 0);
-        if (makesRes.data) {
-          setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
-        }
-        if (modelsRes.data) {
-          setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
-        }
+        setAds(data.ads);
+        setTotalActive(data.totalActive);
+        setMakesMap(data.makesMap);
+        setModelsMap(data.modelsMap);
       } catch (err: unknown) {
-        if (cancelled) return;
+        if (loadId !== loadIdRef.current) return;
+        if (controller.signal.aborted) {
+          setFetchError("Request timed out");
+          return;
+        }
         const message = err instanceof Error ? err.message : "Failed to load listings";
         setFetchError(message);
       } finally {
-        if (!cancelled) setLoading(false);
+        window.clearTimeout(timeoutId);
+        if (loadId === loadIdRef.current) setLoading(false);
       }
     };
 
     void loadHomeData();
 
     return () => {
-      cancelled = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [pathname, refreshKey]);
 

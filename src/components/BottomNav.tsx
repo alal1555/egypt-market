@@ -23,14 +23,7 @@ export default function BottomNav() {
       if (profile) setUserRole(profile.role);
     };
 
-    const getUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) await fetchUserRole(user.id);
-    };
-    getUserData();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
