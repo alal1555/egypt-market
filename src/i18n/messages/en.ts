@@ -228,6 +228,7 @@ export const en = {
     mustLogin: "You must be logged in to post an ad.",
     createFailed: "Failed to create ad",
     somethingWrong: "Something went wrong",
+    publishTimeout: "Posting timed out. Please try again.",
   },
   wallet: {
     errors: {

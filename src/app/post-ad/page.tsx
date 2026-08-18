@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -11,10 +11,16 @@ import {
   CanPostResult,
   WELCOME_BALANCE_EGP,
   WELCOME_FREE_ADS,
-  checkCanPostAd,
-  consumeAdCredit,
 } from "@/lib/wallet";
 import { cleanAdAttributes } from "@/lib/utils";
+import { readStoredAccessToken } from "@/lib/auth-client";
+import {
+  restCanPostAd,
+  restConsumeAdCredit,
+  restCreateAd,
+  restDeleteAd,
+  restUploadAdImage,
+} from "@/lib/post-ad-api";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { localizedMainCategoryName, localizedSubCategoryName } from "@/i18n/catalog";
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
@@ -31,6 +37,8 @@ export default function PostAdPage() {
   const [sellerPhone, setSellerPhone] = useState("");
   const [postCheck, setPostCheck] = useState<CanPostResult | null>(null);
   const [checkingCredits, setCheckingCredits] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const accessTokenRef = useRef<string | null>(null);
   const { t, locale } = useTranslation();
 
   const [makes, setMakes] = useState<{ id: number; name: string }[]>([]);
@@ -49,32 +57,63 @@ export default function PostAdPage() {
   }, [mainCategory, categoryGroups]);
 
   useEffect(() => {
+    let active = true;
+
     async function loadMakes() {
       setLoadingMakes(true);
-      const { data } = await supabase.from("makes").select("*").order("name");
-      if (data) setMakes(data);
-      setLoadingMakes(false);
+      try {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const res = await fetch(`${url}/rest/v1/makes?select=id,name&order=name.asc`, {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(12_000),
+        });
+        if (active && res.ok) {
+          const data = (await res.json()) as { id: number; name: string }[];
+          setMakes(data);
+        }
+      } finally {
+        if (active) setLoadingMakes(false);
+      }
     }
-    async function loadUserPhone() {
-      const { data: { user } } = await supabase.auth.getUser();
-      const phone = user?.user_metadata?.phone_number;
-      if (phone) setSellerPhone(phone);
-    }
-    async function loadPostCheck() {
+
+    const refreshPostCheck = async (accessToken: string) => {
       setCheckingCredits(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      try {
+        const check = await restCanPostAd(accessToken);
+        if (active) setPostCheck(check);
+      } catch {
+        if (active) setPostCheck({ ok: false, error: "wallet_migration_required" });
+      } finally {
+        if (active) setCheckingCredits(false);
+      }
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      const user = session?.user ?? null;
+      setUserId(user?.id ?? null);
+      accessTokenRef.current = session?.access_token ?? null;
+
+      const phone = user?.user_metadata?.phone_number;
+      if (typeof phone === "string" && phone) setSellerPhone(phone);
+
+      if (!user || !session?.access_token) {
+        accessTokenRef.current = null;
         setPostCheck({ ok: false, error: "not_authenticated" });
         setCheckingCredits(false);
         return;
       }
-      const check = await checkCanPostAd(supabase, user.id);
-      setPostCheck(check);
-      setCheckingCredits(false);
-    }
-    loadMakes();
-    loadUserPhone();
-    loadPostCheck();
+
+      void refreshPostCheck(session.access_token);
+    });
+
+    void loadMakes();
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,57 +127,52 @@ export default function PostAdPage() {
     setUploading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error(t("postAd.mustLogin"));
+      const accessToken = accessTokenRef.current ?? readStoredAccessToken();
+      const uid = userId;
+      if (!accessToken || !uid) throw new Error(t("postAd.mustLogin"));
 
-      const canPost = await checkCanPostAd(supabase, user.id);
-      if (!canPost.ok) {
-        throw new Error(formatWalletErrorLocalized(canPost.error, t));
+      if (!postCheck?.ok) {
+        const canPost = await restCanPostAd(accessToken);
+        if (!canPost.ok) {
+          throw new Error(formatWalletErrorLocalized(canPost.error, t));
+        }
       }
 
-      const uploadedUrls = [];
-      for (const file of images) {
-        const filePath = `ad-photos/${user.id}/${Date.now()}-${file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from("ad-images")
-          .upload(filePath, file);
+      const uploadedUrls = await Promise.all(
+        images.map((file, index) => restUploadAdImage(accessToken, uid, file, index)),
+      );
 
-        if (uploadError) throw uploadError;
+      const ad = await restCreateAd(accessToken, {
+        user_id: uid,
+        title: formData.title,
+        price: Number(formData.price),
+        location: formData.location,
+        description: formData.description,
+        category_slug: category,
+        attributes: cleanAdAttributes(formData.attributes),
+        images: uploadedUrls,
+        seller_phone: sellerPhone,
+        status: "pending",
+      });
 
-        const { data } = supabase.storage.from("ad-images").getPublicUrl(filePath);
-        uploadedUrls.push(data.publicUrl);
-      }
-
-      const { data: ad, error: insertError } = await supabase
-        .from("ads")
-        .insert({
-          user_id: user.id,
-          title: formData.title,
-          price: Number(formData.price),
-          location: formData.location,
-          description: formData.description,
-          category_slug: category,
-          attributes: cleanAdAttributes(formData.attributes),
-          images: uploadedUrls,
-          seller_phone: sellerPhone,
-          status: "pending",
-        })
-        .select("id")
-        .single();
-
-      if (insertError || !ad) throw insertError || new Error(t("postAd.createFailed"));
-
-      const consumed = await consumeAdCredit(supabase, ad.id);
+      const consumed = await restConsumeAdCredit(accessToken, ad.id);
       if (!consumed.ok) {
-        await supabase.from("ads").delete().eq("id", ad.id);
+        await restDeleteAd(accessToken, ad.id);
         throw new Error(formatWalletErrorLocalized(consumed.error, t));
       }
 
       alert(t("postAd.submitted"));
       router.push("/my-ads");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t("postAd.somethingWrong");
-      alert(t("postAd.errorPrefix") + message);
+      let message = err instanceof Error ? err.message : t("postAd.somethingWrong");
+      if (err instanceof DOMException && err.name === "TimeoutError") {
+        message = t("postAd.publishTimeout");
+      }
+      if (message === "not_authenticated") {
+        alert(t("postAd.errorPrefix") + t("postAd.mustLogin"));
+      } else {
+        alert(t("postAd.errorPrefix") + message);
+      }
     } finally {
       setUploading(false);
     }

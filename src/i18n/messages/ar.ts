@@ -228,6 +228,7 @@ export const ar = {
     mustLogin: "يجب تسجيل الدخول لنشر إعلان.",
     createFailed: "فشل إنشاء الإعلان",
     somethingWrong: "حدث خطأ",
+    publishTimeout: "انتهت مهلة النشر. حاول مرة أخرى.",
   },
   wallet: {
     errors: {
