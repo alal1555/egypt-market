@@ -235,7 +235,7 @@ export const en = {
       wallet_migration_required:
         "Wallet is not set up in Supabase yet. Run supabase/wallet.sql in the SQL Editor (see supabase/README.md), then refresh this page.",
       phone_not_verified:
-        "You've used your 3 free ads. Verify your phone on Profile to unlock 300 EGP wallet balance.",
+        "You've used your 3 free ads. Verify your phone on Profile to unlock 200 EGP wallet balance.",
       insufficient_credits: "You need {price} EGP balance or a free ad to post. Top-up coming soon.",
       balance_expired: "Your welcome balance has expired. Top-up coming soon.",
       ad_expiry_migration_required:

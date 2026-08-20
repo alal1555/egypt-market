@@ -83,7 +83,7 @@ where free_ads_remaining = 0
   and not welcome_credits_granted;
 
 -- ---------------------------------------------------------------------------
--- Grant 300 EGP wallet balance after phone verification (90-day expiry)
+-- Grant 200 EGP wallet balance after phone verification (90-day expiry)
 -- Free ads (3) are granted on signup — see handle_new_user() in schema.sql
 -- ---------------------------------------------------------------------------
 create or replace function public.grant_welcome_credits(p_user_id uuid default auth.uid())
@@ -123,17 +123,17 @@ begin
   set
     phone_verified = true,
     welcome_credits_granted = true,
-    balance = 300,
+    balance = 200,
     balance_expires_at = now() + interval '90 days'
   where id = p_user_id;
 
   insert into public.wallet_transactions (user_id, amount, type, description)
-  values (p_user_id, 300, 'welcome_grant', 'Welcome bonus: 300 EGP wallet balance (90-day expiry)');
+  values (p_user_id, 200, 'welcome_grant', 'Welcome bonus: 200 EGP wallet balance (90-day expiry)');
 
   return jsonb_build_object(
     'ok', true,
     'free_ads_remaining', v_profile.free_ads_remaining,
-    'balance', 300,
+    'balance', 200,
     'balance_expires_at', (now() + interval '90 days')
   );
 end;

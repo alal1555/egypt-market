@@ -85,10 +85,10 @@ Profile phone verification uses **[Akedly](https://akedly.io)** (WhatsApp-first 
 
 1. User clicks **Send verification code** on Profile
 2. Browser solves Akedly Shield challenge → Next.js API → Akedly sends OTP (WhatsApp preferred)
-3. User enters code → verify API → `grant_welcome_credits()` → 300 EGP wallet balance (90-day expiry)
+3. User enters code → verify API → `grant_welcome_credits()` → 200 EGP wallet balance (90-day expiry)
 4. Phone number saved in `user_metadata.phone_number` (not Supabase Auth phone provider)
 
-New users get **3 free ads on signup**; phone verification unlocks the **300 EGP** balance only.
+New users get **3 free ads on signup**; phone verification unlocks the **200 EGP** balance only.
 
 #### A. Akedly setup
 
@@ -215,7 +215,7 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 | `balance` | numeric | Wallet balance in EGP |
 | `balance_expires_at` | timestamptz | Welcome balance expiry (90 days) |
 | `phone_verified` | boolean | Required to spend wallet balance |
-| `welcome_credits_granted` | boolean | One-time 300 EGP welcome balance |
+| `welcome_credits_granted` | boolean | One-time 200 EGP welcome balance |
 | `created_at` | timestamptz | auto |
 
 ### `wallet_transactions`

@@ -235,7 +235,7 @@ export const ar = {
       wallet_migration_required:
         "المحفظة غير مفعّلة في Supabase. نفّذ supabase/wallet.sql في SQL Editor ثم حدّث الصفحة.",
       phone_not_verified:
-        "استخدمت الإعلانات المجانية الثلاثة. تحقق من هاتفك في الحساب لفتح 300 ج.م.",
+        "استخدمت الإعلانات المجانية الثلاثة. تحقق من هاتفك في الحساب لفتح 200 ج.م.",
       insufficient_credits: "تحتاج {price} ج.م أو إعلاناً مجانياً. شحن الرصيد قريباً.",
       balance_expired: "انتهت صلاحية رصيد الترحيب. شحن الرصيد قريباً.",
       ad_expiry_migration_required:

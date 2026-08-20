@@ -2,7 +2,7 @@
 
 export const AD_POST_PRICE_EGP = 40;
 export const WELCOME_FREE_ADS = 3;
-export const WELCOME_BALANCE_EGP = 300;
+export const WELCOME_BALANCE_EGP = 200;
 export const BALANCE_EXPIRY_DAYS = 90;
 export const AD_LIVE_DAYS = 30;
 export const TOP_UP_MIN_EGP = 100;

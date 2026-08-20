@@ -51,7 +51,7 @@ export function formatWalletError(code: string | undefined): string {
     case "wallet_migration_required":
       return "Wallet is not set up in Supabase yet. Run supabase/wallet.sql in the SQL Editor (see supabase/README.md), then refresh this page.";
     case "phone_not_verified":
-      return "You've used your 3 free ads. Verify your phone on Profile to unlock 300 EGP wallet balance.";
+      return "You've used your 3 free ads. Verify your phone on Profile to unlock 200 EGP wallet balance.";
     case "insufficient_credits":
       return `You need ${AD_POST_PRICE_EGP} EGP balance or a free ad to post. Top-up coming soon.`;
     case "balance_expired":
