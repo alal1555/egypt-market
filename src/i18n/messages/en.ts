@@ -395,6 +395,23 @@ export const en = {
   authCallback: {
     redirecting: "Redirecting...",
   },
+  shareAd: {
+    button: "Share",
+    title: "Share listing",
+    close: "Close",
+    copyLink: "Copy / share link",
+    shareImage: "Share as image",
+    sharePdf: "Download PDF flyer",
+    linkCopied: "Link copied to clipboard.",
+    linkShared: "Share menu opened.",
+    imageReady: "Image ready — check downloads or your share app.",
+    pdfReady: "PDF ready — check downloads or your share app.",
+    error: "Could not generate share file. Try again.",
+    tagline: "Find more deals on Yaddii — Egypt's marketplace.",
+    footerLine: "Browse & post ads on {site}",
+    startingBidLabel: "Starting bid",
+    currentBidLabel: "Current highest bid",
+  },
 } as const;
 
 export type MessageTree = {

@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Phone, MessageCircle, MapPin } from "lucide-react";
 import AdCard from "@/components/AdCard";
 import AuctionPanel from "@/components/AuctionPanel";
+import ShareAdMenu from "@/components/ShareAdMenu";
 import { extractSpecs, formatPhoneForLink, cleanAdAttributes } from "@/lib/utils";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import {
@@ -203,6 +204,15 @@ export default function ProductPage() {
                 )}
               </div>
             )}
+
+            <div className="rounded-3xl bg-white p-4 shadow-sm border border-gray-100">
+              <ShareAdMenu
+                ad={ad}
+                makesMap={makesMap}
+                modelsMap={modelsMap}
+                className="w-full [&>button]:w-full"
+              />
+            </div>
           </div>
         </div>
 

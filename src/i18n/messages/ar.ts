@@ -395,4 +395,21 @@ export const ar = {
   authCallback: {
     redirecting: "جاري التحويل...",
   },
+  shareAd: {
+    button: "مشاركة",
+    title: "مشاركة الإعلان",
+    close: "إغلاق",
+    copyLink: "نسخ / مشاركة الرابط",
+    shareImage: "مشاركة كصورة",
+    sharePdf: "تحميل PDF",
+    linkCopied: "تم نسخ الرابط.",
+    linkShared: "تم فتح قائمة المشاركة.",
+    imageReady: "الصورة جاهزة — تحقق من التحميلات أو تطبيق المشاركة.",
+    pdfReady: "ملف PDF جاهز — تحقق من التحميلات أو تطبيق المشاركة.",
+    error: "تعذّر إنشاء الملف. حاول مرة أخرى.",
+    tagline: "اعثر على المزيد على يدي — سوق مصر.",
+    footerLine: "تصفّح وانشر إعلاناتك على {site}",
+    startingBidLabel: "سعر الافتتاح",
+    currentBidLabel: "أعلى مزايدة حالياً",
+  },
 };

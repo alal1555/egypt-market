@@ -16,12 +16,15 @@ import { renewAdListing } from "@/lib/wallet";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { getDisplayPrice, isAuctionListing, type AuctionAdFields } from "@/constants/auction";
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
+import ShareAdMenu from "@/components/ShareAdMenu";
 
 interface Ad extends AuctionAdFields {
   id: string;
   title: string;
   price: number;
   location: string;
+  description?: string | null;
+  seller_phone?: string | null;
   category_slug: string;
   images: string[];
   status: string;
@@ -53,7 +56,7 @@ export default function MyAdsPage() {
         supabase
           .from("ads")
           .select(
-            "id, title, price, location, category_slug, images, status, attributes, created_at, expires_at, listing_type, auction_status, auction_current_bid, auction_bid_count, auction_ends_at",
+            "id, title, price, location, description, seller_phone, category_slug, images, status, attributes, created_at, expires_at, listing_type, auction_status, auction_current_bid, auction_bid_count, auction_ends_at",
           )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
@@ -181,6 +184,26 @@ export default function MyAdsPage() {
               )}
 
               <div className="flex flex-col gap-2 mt-auto pt-4">
+                {ad.status === "active" && (
+                  <ShareAdMenu
+                    ad={{
+                      id: ad.id,
+                      title: ad.title,
+                      price: ad.price,
+                      location: ad.location,
+                      description: ad.description,
+                      images: ad.images,
+                      seller_phone: ad.seller_phone,
+                      category_slug: ad.category_slug,
+                      attributes: ad.attributes,
+                      listing_type: ad.listing_type,
+                      auction_current_bid: ad.auction_current_bid,
+                    }}
+                    makesMap={makesMap}
+                    modelsMap={modelsMap}
+                    className="w-full [&>button]:w-full"
+                  />
+                )}
                 {expired && !auction && (
                   <button
                     onClick={() => handleRenew(ad.id)}
