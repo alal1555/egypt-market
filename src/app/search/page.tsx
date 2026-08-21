@@ -5,14 +5,21 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AdCard from "@/components/AdCard";
 import SearchFilters from "@/components/SearchFilters";
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X, Gavel, Tag } from "lucide-react";
 import { CATEGORY_CONFIG, getAttributesBySlug, getCategoryGroups } from "@/constants/categoryConfig";
 import { extractSpecs } from "@/lib/utils";
+import { getDisplayPrice } from "@/constants/auction";
+import { restCloseExpiredAuctions } from "@/lib/auction";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
 interface Ad {
   id: string; title: string; price: number; location: string; category_slug: string;
   images: string[]; attributes: Record<string, any>; status?: string; created_at: string;
+  listing_type?: string;
+  auction_current_bid?: number | null;
+  auction_bid_count?: number;
+  auction_ends_at?: string | null;
+  auction_status?: string | null;
 }
 
 function SearchResults() {
@@ -22,6 +29,7 @@ function SearchResults() {
   const query = searchParams.get("q") || "";
   const mainCatFilter = searchParams.get("main_cat") || "";
   const subCatFilter = searchParams.get("sub_cat") || "";
+  const listingsMode = searchParams.get("listings") === "auction" ? "auction" : "fixed";
 
   const [ads, setAds] = useState<Ad[]>([]);
   const [allMakes, setAllMakes] = useState<{ id: number; name: string }[]>([]);
@@ -85,9 +93,24 @@ function SearchResults() {
     router.push(`/search?${params.toString()}`, { scroll: false });
   };
 
+  const clearFiltersKeepListingMode = () => {
+    const params = new URLSearchParams();
+    if (listingsMode === "auction") params.set("listings", "auction");
+    const qs = params.toString();
+    router.push(qs ? `/search?${qs}` : "/search", { scroll: false });
+  };
+
   useEffect(() => {
     async function executeSearch() {
+      await restCloseExpiredAuctions();
+
       let q = supabase.from("ads").select("*").eq("status", "active");
+
+      if (listingsMode === "auction") {
+        q = q.eq("listing_type", "auction");
+      } else {
+        q = q.or("listing_type.eq.fixed,listing_type.is.null");
+      }
 
       if (subCatFilter) {
         q = q.eq("category_slug", subCatFilter);
@@ -124,7 +147,7 @@ function SearchResults() {
       setAds(data || []);
     }
     executeSearch();
-  }, [query, mainCatFilter, subCatFilter, activeAttrs, subCategoryAttributes]);
+  }, [query, mainCatFilter, subCatFilter, activeAttrs, subCategoryAttributes, listingsMode]);
 
   const filterProps = {
     mainCatFilter,
@@ -141,9 +164,35 @@ function SearchResults() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-10">
-      {/* Desktop category bar */}
-      <div className="hidden md:block bg-white p-6 rounded-2xl border mb-10 shadow-sm">
+      {/* Desktop category bar + listing type toggle */}
+      <div className="hidden md:block bg-white p-6 rounded-2xl border mb-6 shadow-sm space-y-5">
         <SearchFilters {...filterProps} showCategories showAttributes={false} />
+        <div className="flex rounded-xl border border-gray-200 p-1 bg-gray-50 w-full max-w-md">
+          <button
+            type="button"
+            onClick={() => updateURL({ listings: null })}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${
+              listingsMode === "fixed"
+                ? "bg-white text-[#FF6321] shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Tag size={16} />
+            {t("searchPage.viewFixed")}
+          </button>
+          <button
+            type="button"
+            onClick={() => updateURL({ listings: "auction" })}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${
+              listingsMode === "auction"
+                ? "bg-white text-[#FF6321] shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Gavel size={16} />
+            {t("searchPage.viewAuctions")}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-8 items-start">
@@ -153,6 +202,34 @@ function SearchResults() {
         </aside>
 
         <main className="flex-1 min-w-0">
+          {/* Mobile listing type toggle */}
+          <div className="md:hidden flex rounded-xl border border-gray-200 p-1 bg-gray-50 mb-4">
+            <button
+              type="button"
+              onClick={() => updateURL({ listings: null })}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition ${
+                listingsMode === "fixed"
+                  ? "bg-white text-[#FF6321] shadow-sm"
+                  : "text-gray-600"
+              }`}
+            >
+              <Tag size={15} />
+              {t("searchPage.viewFixed")}
+            </button>
+            <button
+              type="button"
+              onClick={() => updateURL({ listings: "auction" })}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition ${
+                listingsMode === "auction"
+                  ? "bg-white text-[#FF6321] shadow-sm"
+                  : "text-gray-600"
+              }`}
+            >
+              <Gavel size={15} />
+              {t("searchPage.viewAuctions")}
+            </button>
+          </div>
+
           <div className="mb-4 md:mb-6 flex justify-between items-center gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <button
@@ -169,12 +246,14 @@ function SearchResults() {
                 )}
               </button>
               <h2 className="text-base md:text-xl font-bold text-gray-900 truncate">
-                {t("searchPage.adsFound", { count: ads.length })}
+                {listingsMode === "auction"
+                  ? t("searchPage.auctionsFound", { count: ads.length })
+                  : t("searchPage.adsFound", { count: ads.length })}
               </h2>
             </div>
             {hasActiveFilters && (
               <button
-                onClick={() => router.push("/search")}
+                onClick={clearFiltersKeepListingMode}
                 className="text-sm text-gray-500 hover:text-[#FF6321] underline shrink-0"
               >
                 {t("searchPage.clearAll")}
@@ -194,7 +273,7 @@ function SearchResults() {
                 key={ad.id}
                 id={ad.id}
                 title={ad.title}
-                price={String(ad.price)}
+                price={String(getDisplayPrice(ad))}
                 location={ad.location}
                 category={ad.category_slug}
                 imageUrl={ad.images?.[0]}
@@ -202,16 +281,21 @@ function SearchResults() {
                 makeName={makesMap[ad.attributes?.make_id]}
                 modelName={modelsMap[ad.attributes?.model_id]}
                 postedDate={new Date(ad.created_at).toLocaleDateString()}
+                listing_type={ad.listing_type}
+                auction_current_bid={ad.auction_current_bid}
+                auction_bid_count={ad.auction_bid_count}
+                auction_ends_at={ad.auction_ends_at}
+                auction_status={ad.auction_status}
               />
             ))}
           </div>
 
           {ads.length === 0 && (
             <div className="text-center py-16 text-gray-500">
-              {t("searchPage.noMatch")}
+              {listingsMode === "auction" ? t("searchPage.noAuctions") : t("searchPage.noMatch")}
               {hasActiveFilters && (
                 <button
-                  onClick={() => router.push("/search")}
+                  onClick={clearFiltersKeepListingMode}
                   className="block mx-auto mt-3 text-sm text-[#FF6321] font-bold underline"
                 >
                   {t("searchPage.clearFilters")}

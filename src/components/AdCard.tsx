@@ -2,9 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Heart, EyeOff, Clock, CheckCircle, MapPin, CalendarClock } from "lucide-react"; 
+import { Heart, EyeOff, Clock, CheckCircle, MapPin, CalendarClock, Gavel } from "lucide-react"; 
 import { supabase } from "@/lib/supabase";
 import { getListingDisplayStatus, type ListingDisplayStatus } from "@/constants/adPricing";
+import {
+  formatAuctionCountdown,
+  getDisplayPrice,
+  isAuctionListing,
+  isAuctionLive,
+  type AuctionAdFields,
+} from "@/constants/auction";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import {
   formatAttributeValue,
@@ -12,7 +19,7 @@ import {
   localizedAttributeLabel,
 } from "@/i18n/catalog";
 
-interface AdProps {
+interface AdProps extends AuctionAdFields {
   id: string;
   title: string;
   price: string;
@@ -33,11 +40,33 @@ export default function AdCard({
   id, title, price, location, imageUrl, specs = {}, postedDate,
   makeName, modelName, currentUserId: propUserId, status = "active", expires_at, showStatus = false,
   category = "",
+  listing_type,
+  auction_current_bid,
+  auction_bid_count,
+  auction_ends_at,
+  auction_status,
 }: AdProps) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const { t, locale } = useTranslation();
+
+  const auction = isAuctionListing({ listing_type });
+  const liveAuction = auction && isAuctionLive({ listing_type, auction_status, auction_ends_at });
+  const displayAmount = auction
+    ? getDisplayPrice({
+        listing_type,
+        price: Number(price),
+        auction_current_bid: auction_current_bid ?? null,
+      })
+    : Number(price);
+
+  useEffect(() => {
+    if (!liveAuction || !auction_ends_at) return;
+    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [liveAuction, auction_ends_at]);
 
   useEffect(() => {
     if (propUserId) { setUserId(propUserId); return; }
@@ -103,6 +132,12 @@ export default function AdCard({
            </div>
         )}
 
+        {auction && !displayStatus && (
+          <div className="absolute top-3 left-3 z-10 px-2 py-1 rounded text-[10px] font-bold text-white bg-[#FF6321] flex items-center gap-1">
+            <Gavel size={11} /> {t("auction.cardBadge")}
+          </div>
+        )}
+
         <div className="relative h-48 w-full overflow-hidden bg-gray-50 flex-shrink-0">
           <img src={displayImage} alt={title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
         </div>
@@ -119,7 +154,22 @@ export default function AdCard({
           
           {/* This section grows to fill space, pushing price to the bottom */}
           <div className="flex-grow">
-            <p className="font-black text-xl mb-2 text-[#FF6321]">{price} {t("common.egp")}</p>
+            <p className="font-black text-xl mb-1 text-[#FF6321]">
+              {displayAmount.toLocaleString()} {t("common.egp")}
+            </p>
+            {auction && (
+              <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">
+                {(auction_bid_count ?? 0) > 0 ? t("auction.currentBid") : t("auction.startingPrice")}
+                {liveAuction && auction_ends_at && (
+                  <span className="mx-1">·</span>
+                )}
+                {liveAuction && auction_ends_at && (
+                  <span className="font-mono text-orange-700">
+                    {formatAuctionCountdown(auction_ends_at, nowMs)}
+                  </span>
+                )}
+              </p>
+            )}
             
             {specs && Object.keys(specs).length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">

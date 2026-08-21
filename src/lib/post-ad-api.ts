@@ -73,6 +73,11 @@ export type RestCreateAdInput = {
   images: string[];
   seller_phone: string;
   status: "pending";
+  listing_type?: "fixed" | "auction";
+  auction_bid_increment?: number | null;
+  auction_reserve_price?: number | null;
+  auction_duration_hours?: number | null;
+  auction_status?: string | null;
 };
 
 export async function restCreateAd(

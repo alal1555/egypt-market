@@ -14,9 +14,10 @@ import {
 } from "@/constants/adPricing";
 import { renewAdListing } from "@/lib/wallet";
 import { useTranslation } from "@/i18n/LocaleProvider";
+import { getDisplayPrice, isAuctionListing, type AuctionAdFields } from "@/constants/auction";
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
 
-interface Ad {
+interface Ad extends AuctionAdFields {
   id: string;
   title: string;
   price: number;
@@ -51,7 +52,9 @@ export default function MyAdsPage() {
       const [adsRes, makesRes, modelsRes] = await Promise.all([
         supabase
           .from("ads")
-          .select("id, title, price, location, category_slug, images, status, attributes, created_at, expires_at")
+          .select(
+            "id, title, price, location, category_slug, images, status, attributes, created_at, expires_at, listing_type, auction_status, auction_current_bid, auction_bid_count, auction_ends_at",
+          )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase.from("makes").select("id, name"),
@@ -150,6 +153,8 @@ export default function MyAdsPage() {
             const listingStatus = getListingDisplayStatus(ad);
             const expired = listingStatus === "expired";
             const expiryLabel = formatExpiryDate(ad.expires_at);
+            const auction = isAuctionListing(ad);
+            const displayPrice = getDisplayPrice(ad);
 
             return (
             <div key={ad.id} className="border rounded-2xl p-3 bg-white shadow-sm flex flex-col">
@@ -158,7 +163,7 @@ export default function MyAdsPage() {
                 status={ad.status}
                 expires_at={ad.expires_at}
                 showStatus={true}
-                price={String(ad.price)}
+                price={String(displayPrice)}
                 category={ad.category_slug}
                 imageUrl={ad.images?.[0]}
                 specs={extractSpecs(ad.attributes)}
@@ -166,7 +171,7 @@ export default function MyAdsPage() {
                 modelName={ad.attributes?.model_id ? modelsMap[ad.attributes.model_id] : undefined}
               />
 
-              {ad.status === "active" && ad.expires_at && (
+              {ad.status === "active" && ad.expires_at && !auction && (
                 <p className={`text-xs mt-3 flex items-center gap-1 ${expired ? "text-red-600 font-bold" : "text-gray-500"}`}>
                   <CalendarClock size={14} />
                   {expired
@@ -176,7 +181,7 @@ export default function MyAdsPage() {
               )}
 
               <div className="flex flex-col gap-2 mt-auto pt-4">
-                {expired && (
+                {expired && !auction && (
                   <button
                     onClick={() => handleRenew(ad.id)}
                     disabled={renewingId === ad.id}

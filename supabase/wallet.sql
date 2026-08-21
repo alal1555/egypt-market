@@ -171,6 +171,18 @@ begin
     return jsonb_build_object('ok', true, 'type', 'admin_waiver');
   end if;
 
+  -- Auction listings are free (مزاد)
+  if p_ad_id is not null then
+    if exists (
+      select 1 from public.ads
+      where id = p_ad_id
+        and user_id = v_uid
+        and listing_type = 'auction'
+    ) then
+      return jsonb_build_object('ok', true, 'type', 'auction_waiver');
+    end if;
+  end if;
+
   if v_profile.free_ads_remaining > 0 then
     update public.profiles
     set free_ads_remaining = free_ads_remaining - 1

@@ -6,6 +6,8 @@ import { useRouter, usePathname } from "next/navigation";
 import AdCard from "@/components/AdCard";
 import CategoryBar from "@/components/CategoryBar";
 import { extractSpecs } from "@/lib/utils";
+import { getDisplayPrice } from "@/constants/auction";
+import { restCloseExpiredAuctions } from "@/lib/auction";
 import { HOME_REFRESH_EVENT } from "@/lib/home";
 import { fetchHomeFeed, type HomeAd } from "@/lib/home-feed";
 import { useTranslation } from "@/i18n/LocaleProvider";
@@ -42,6 +44,7 @@ function HomeContent() {
       setFetchError(null);
 
       try {
+        await restCloseExpiredAuctions();
         const data = await fetchHomeFeed({
           limit: HOME_RECENT_LIMIT,
           signal: controller.signal,
@@ -138,14 +141,27 @@ function HomeContent() {
                 key={ad.id}
                 id={ad.id}
                 title={ad.title}
-                price={String(ad.price)}
+                price={String(getDisplayPrice(ad))}
                 location={ad.location}
                 category={ad.category_slug}
                 imageUrl={ad.images?.[0]}
                 specs={ad.attributes ? extractSpecs(ad.attributes) : {}}
                 postedDate={new Date(ad.created_at).toLocaleDateString()}
-                makeName={ad.attributes?.make_id ? makesMap[ad.attributes.make_id] : undefined}
-                modelName={ad.attributes?.model_id ? modelsMap[ad.attributes.model_id] : undefined}
+                makeName={
+                  ad.attributes?.make_id
+                    ? makesMap[Number(ad.attributes.make_id)]
+                    : undefined
+                }
+                modelName={
+                  ad.attributes?.model_id
+                    ? modelsMap[Number(ad.attributes.model_id)]
+                    : undefined
+                }
+                listing_type={ad.listing_type}
+                auction_current_bid={ad.auction_current_bid}
+                auction_bid_count={ad.auction_bid_count}
+                auction_ends_at={ad.auction_ends_at}
+                auction_status={ad.auction_status}
               />
             ))}
             </div>

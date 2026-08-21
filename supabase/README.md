@@ -25,9 +25,10 @@ In **Supabase Dashboard → SQL Editor**, run in order:
 2. [`rls.sql`](./rls.sql) — row level security policies
 3. [`wallet.sql`](./wallet.sql) — wallet columns, transactions, credit functions
 4. [`ad-expiry.sql`](./ad-expiry.sql) — listing `expires_at`, 30-day visibility, `renew_ad` RPC
-5. [`top-up.sql`](./top-up.sql) — Paymob wallet top-up + `apply_top_up` RPC
-6. [`schema-alignment.sql`](./schema-alignment.sql) — fix live drift (orphan ads, legacy columns, NOT NULL, duplicate RLS)
-7. [`admin-users.sql`](./admin-users.sql) — super admin user list with emails (`admin_list_users` RPC)
+5. [`auction.sql`](./auction.sql) — optional timed auctions (مزاد), bids, `place_auction_bid` RPC
+6. [`top-up.sql`](./top-up.sql) — Paymob wallet top-up + `apply_top_up` RPC
+7. [`schema-alignment.sql`](./schema-alignment.sql) — fix live drift (orphan ads, legacy columns, NOT NULL, duplicate RLS)
+8. [`admin-users.sql`](./admin-users.sql) — super admin user list with emails (`admin_list_users` RPC)
 
 If tables already exist, compare columns and add missing ones manually instead of re-running `create table`.
 

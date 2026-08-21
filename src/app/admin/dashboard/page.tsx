@@ -19,6 +19,12 @@ interface Ad {
   images?: string[];
   created_at: string;
   expires_at?: string | null;
+  listing_type?: string;
+  auction_duration_hours?: number | null;
+  auction_status?: string | null;
+  auction_current_bid?: number | null;
+  auction_bid_count?: number;
+  auction_ends_at?: string | null;
 }
 
 interface Profile {
@@ -248,7 +254,7 @@ export default function AdminDashboard() {
 
       const { data: listings } = await supabase
         .from("ads")
-        .select("id, title, price, location, status, description, images, created_at, expires_at")
+        .select("id, title, price, location, status, description, images, created_at, expires_at, listing_type, auction_duration_hours, auction_status, auction_current_bid, auction_bid_count, auction_ends_at")
         .order("created_at", { ascending: false });
 
       let userProfiles: Profile[] = [];
@@ -289,10 +295,23 @@ export default function AdminDashboard() {
     if (!confirmAction) return;
 
     const current = ads.find((ad) => ad.id === id);
-    const updates: { status: "active" | "banned"; expires_at?: string } = { status: newStatus };
+    const updates: {
+      status: "active" | "banned";
+      expires_at?: string;
+      auction_status?: string;
+      auction_ends_at?: string;
+    } = { status: newStatus };
 
     if (newStatus === "active" && (!current?.expires_at || current.status === "banned")) {
-      updates.expires_at = computeExpiresAt();
+      if (current?.listing_type === "auction") {
+        const hours = current.auction_duration_hours ?? 24;
+        const endsAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+        updates.auction_status = "live";
+        updates.auction_ends_at = endsAt;
+        updates.expires_at = endsAt;
+      } else {
+        updates.expires_at = computeExpiresAt();
+      }
     }
     
     const { error } = await supabase

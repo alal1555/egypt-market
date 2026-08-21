@@ -23,6 +23,14 @@ import {
 } from "@/lib/post-ad-api";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { localizedMainCategoryName, localizedSubCategoryName } from "@/i18n/catalog";
+import {
+  AUCTION_DURATIONS_HOURS,
+  DEFAULT_AUCTION_BID_INCREMENT,
+  MIN_AUCTION_BID_INCREMENT,
+  type AuctionDurationHours,
+  type ListingType,
+} from "@/constants/auction";
+import { mergeAuctionFields } from "@/lib/auction";
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
 
 export default function PostAdPage() {
@@ -51,6 +59,11 @@ export default function PostAdPage() {
     description: "",
     attributes: {} as Record<string, string>,
   });
+
+  const [listingType, setListingType] = useState<ListingType>("fixed");
+  const [bidIncrement, setBidIncrement] = useState(DEFAULT_AUCTION_BID_INCREMENT);
+  const [reservePrice, setReservePrice] = useState<number | "">("");
+  const [auctionDuration, setAuctionDuration] = useState<AuctionDurationHours>(24);
 
   const subCategories = useMemo(() => {
     return mainCategory ? categoryGroups[mainCategory] || [] : [];
@@ -131,10 +144,12 @@ export default function PostAdPage() {
       const uid = userId;
       if (!accessToken || !uid) throw new Error(t("postAd.mustLogin"));
 
-      if (!postCheck?.ok) {
-        const canPost = await restCanPostAd(accessToken);
-        if (!canPost.ok) {
-          throw new Error(formatWalletErrorLocalized(canPost.error, t));
+      if (listingType !== "auction") {
+        if (!postCheck?.ok) {
+          const canPost = await restCanPostAd(accessToken);
+          if (!canPost.ok) {
+            throw new Error(formatWalletErrorLocalized(canPost.error, t));
+          }
         }
       }
 
@@ -142,23 +157,35 @@ export default function PostAdPage() {
         images.map((file, index) => restUploadAdImage(accessToken, uid, file, index)),
       );
 
-      const ad = await restCreateAd(accessToken, {
-        user_id: uid,
-        title: formData.title,
-        price: Number(formData.price),
-        location: formData.location,
-        description: formData.description,
-        category_slug: category,
-        attributes: cleanAdAttributes(formData.attributes),
-        images: uploadedUrls,
-        seller_phone: sellerPhone,
-        status: "pending",
-      });
+      const adPayload = mergeAuctionFields(
+        {
+          user_id: uid,
+          title: formData.title,
+          price: Number(formData.price),
+          location: formData.location,
+          description: formData.description,
+          category_slug: category,
+          attributes: cleanAdAttributes(formData.attributes),
+          images: uploadedUrls,
+          seller_phone: sellerPhone,
+          status: "pending",
+        },
+        listingType,
+        {
+          bidIncrement: Number(bidIncrement),
+          reservePrice: reservePrice === "" ? null : Number(reservePrice),
+          durationHours: auctionDuration,
+        },
+      );
 
-      const consumed = await restConsumeAdCredit(accessToken, ad.id);
-      if (!consumed.ok) {
-        await restDeleteAd(accessToken, ad.id);
-        throw new Error(formatWalletErrorLocalized(consumed.error, t));
+      const ad = await restCreateAd(accessToken, adPayload as Parameters<typeof restCreateAd>[1]);
+
+      if (listingType !== "auction") {
+        const consumed = await restConsumeAdCredit(accessToken, ad.id);
+        if (!consumed.ok) {
+          await restDeleteAd(accessToken, ad.id);
+          throw new Error(formatWalletErrorLocalized(consumed.error, t));
+        }
       }
 
       alert(t("postAd.submitted"));
@@ -179,6 +206,14 @@ export default function PostAdPage() {
   };
 
   const renderCreditBanner = () => {
+    if (listingType === "auction") {
+      return (
+        <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
+          {t("postAd.auctionFree")}
+        </div>
+      );
+    }
+
     if (checkingCredits) {
       return (
         <div className="mb-6 p-4 rounded-xl bg-gray-50 border text-sm text-gray-500 text-center">
@@ -223,7 +258,8 @@ export default function PostAdPage() {
     );
   };
 
-  const canSubmit = postCheck?.ok && !uploading;
+  const canSubmit =
+    !uploading && !!userId && (listingType === "auction" || Boolean(postCheck?.ok));
 
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white shadow-xl rounded-2xl my-10 border border-gray-100">
@@ -325,13 +361,63 @@ export default function PostAdPage() {
           </div>
         </div>
 
+        <div className="space-y-4 p-6 bg-gray-50 rounded-xl border border-gray-100">
+          <label className="block text-sm font-bold text-gray-600 uppercase">{t("postAd.listingTypeLabel")}</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label
+              className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${
+                listingType === "fixed"
+                  ? "border-[#FF6321] bg-orange-50"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <input
+                type="radio"
+                name="listingType"
+                value="fixed"
+                checked={listingType === "fixed"}
+                onChange={() => setListingType("fixed")}
+                className="mt-1"
+              />
+              <span>
+                <span className="block font-bold text-gray-900">{t("postAd.fixedPriceOption")}</span>
+              </span>
+            </label>
+            <label
+              className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${
+                listingType === "auction"
+                  ? "border-[#FF6321] bg-orange-50"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <input
+                type="radio"
+                name="listingType"
+                value="auction"
+                checked={listingType === "auction"}
+                onChange={() => setListingType("auction")}
+                className="mt-1"
+              />
+              <span>
+                <span className="block font-bold text-gray-900">{t("postAd.auctionOption")}</span>
+                <span className="block text-xs text-gray-500 mt-1">{t("postAd.auctionHint")}</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input
             type="number"
-            placeholder={t("postAd.pricePlaceholder")}
+            placeholder={
+              listingType === "auction"
+                ? t("postAd.startingPricePlaceholder")
+                : t("postAd.pricePlaceholder")
+            }
             className="w-full p-4 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
             onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
             required
+            min={1}
           />
           <input
             type="text"
@@ -341,6 +427,50 @@ export default function PostAdPage() {
             required
           />
         </div>
+
+        {listingType === "auction" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-orange-50/50 rounded-xl border border-orange-100">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">{t("postAd.bidIncrementLabel")}</label>
+              <input
+                type="number"
+                min={MIN_AUCTION_BID_INCREMENT}
+                value={bidIncrement}
+                onChange={(e) => setBidIncrement(Number(e.target.value) || DEFAULT_AUCTION_BID_INCREMENT)}
+                className="w-full p-4 border rounded-lg bg-white"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">{t("postAd.durationLabel")}</label>
+              <select
+                value={auctionDuration}
+                onChange={(e) => setAuctionDuration(Number(e.target.value) as AuctionDurationHours)}
+                className="w-full p-4 border rounded-lg bg-white"
+              >
+                {AUCTION_DURATIONS_HOURS.map((hours) => (
+                  <option key={hours} value={hours}>
+                    {t("postAd.durationHours", { hours })}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-bold text-gray-700 mb-2">{t("postAd.reservePriceLabel")}</label>
+              <input
+                type="number"
+                min={0}
+                value={reservePrice}
+                onChange={(e) =>
+                  setReservePrice(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                placeholder="—"
+                className="w-full p-4 border rounded-lg bg-white"
+              />
+              <p className="text-xs text-gray-500 mt-2">{t("postAd.reserveHint")}</p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="block text-lg font-semibold text-gray-700">{t("postAd.contactPhone")}</label>

@@ -13,6 +13,11 @@ export type HomeAd = {
   status: string;
   created_at: string;
   attributes?: Record<string, unknown>;
+  listing_type?: string;
+  auction_current_bid?: number | null;
+  auction_bid_count?: number;
+  auction_ends_at?: string | null;
+  auction_status?: string | null;
 };
 
 export type HomeFeedData = {
