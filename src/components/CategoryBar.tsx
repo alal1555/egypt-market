@@ -43,6 +43,11 @@ function iconBoxClass(variant: CategoryBarVariant, isSelected: boolean): string 
       ? "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-white shadow-sm"
       : "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-white/80 group-hover:bg-white";
   }
+  if (variant === "accent" || variant === "default") {
+    const base = "flex h-10 w-10 items-center justify-center rounded-xl transition-all";
+    if (isSelected) return `${base} bg-[#FF6321] shadow-sm`;
+    return `${base} bg-gray-50 group-hover:bg-[#FF6321] group-hover:shadow-sm`;
+  }
   return isSelected
     ? "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-orange-50"
     : "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-gray-50 group-hover:bg-orange-50/60";
@@ -50,6 +55,10 @@ function iconBoxClass(variant: CategoryBarVariant, isSelected: boolean): string 
 
 function iconClass(variant: CategoryBarVariant, isSelected: boolean): string {
   if (variant === "solid") return "text-white";
+  if (variant === "accent" || variant === "default") {
+    if (isSelected) return "text-white transition-colors";
+    return "text-gray-600 group-hover:text-white transition-colors";
+  }
   if (isSelected) return "text-[#FF6321]";
   return variant === "light" ? "text-gray-700" : "text-gray-600";
 }
@@ -58,7 +67,7 @@ function labelClass(variant: CategoryBarVariant): string {
   if (variant === "solid") {
     return "text-[11px] font-bold flex items-center gap-0.5 text-white/95 whitespace-nowrap";
   }
-  return "text-[11px] font-bold flex items-center gap-0.5 text-gray-500 whitespace-nowrap";
+  return "text-[11px] font-bold flex items-center gap-0.5 text-gray-500 group-hover:text-[#FF6321] whitespace-nowrap transition-colors";
 }
 
 type Props = {
