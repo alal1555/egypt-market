@@ -6,6 +6,8 @@ import { CATEGORY_CONFIG } from "@/constants/categoryConfig";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { localizedMainCategoryName, localizedSubCategoryName } from "@/i18n/catalog";
 
+export type CategoryBarVariant = "default" | "light" | "solid" | "accent";
+
 const getIconForCategory = (slug: string) => {
   const icons: Record<string, any> = {
     "vehicles-sale": Car, "vehicles-rent": Car, "watercraft": Anchor,
@@ -17,7 +19,54 @@ const getIconForCategory = (slug: string) => {
   return icons[slug] || LayoutGrid;
 };
 
-export default function CategoryBar({ onSelect }: { onSelect: (main: string, sub: string) => void }) {
+function barClass(variant: CategoryBarVariant): string {
+  switch (variant) {
+    case "light":
+      return "bg-orange-50 border-b border-orange-100 shadow-sm";
+    case "solid":
+      return "bg-[#FF6321] border-b border-[#e85a1e] shadow-md";
+    case "accent":
+      return "bg-white border-b-4 border-[#FF6321] shadow-sm";
+    default:
+      return "bg-white border-b border-gray-100 shadow-sm";
+  }
+}
+
+function iconBoxClass(variant: CategoryBarVariant, isSelected: boolean): string {
+  if (variant === "solid") {
+    return isSelected
+      ? "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-white/30"
+      : "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-white/15 group-hover:bg-white/25";
+  }
+  if (variant === "light") {
+    return isSelected
+      ? "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-white shadow-sm"
+      : "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-white/80 group-hover:bg-white";
+  }
+  return isSelected
+    ? "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-orange-50"
+    : "flex h-10 w-10 items-center justify-center rounded-xl transition-all bg-gray-50 group-hover:bg-orange-50/60";
+}
+
+function iconClass(variant: CategoryBarVariant, isSelected: boolean): string {
+  if (variant === "solid") return "text-white";
+  if (isSelected) return "text-[#FF6321]";
+  return variant === "light" ? "text-gray-700" : "text-gray-600";
+}
+
+function labelClass(variant: CategoryBarVariant): string {
+  if (variant === "solid") {
+    return "text-[11px] font-bold flex items-center gap-0.5 text-white/95 whitespace-nowrap";
+  }
+  return "text-[11px] font-bold flex items-center gap-0.5 text-gray-500 whitespace-nowrap";
+}
+
+type Props = {
+  onSelect: (main: string, sub: string) => void;
+  variant?: CategoryBarVariant;
+};
+
+export default function CategoryBar({ onSelect, variant = "accent" }: Props) {
   const [openDropdown, setOpenDropdown] = useState<{slug: string, rect: DOMRect} | null>(null);
   const { locale } = useTranslation();
   const dropdownWidth = 192;
@@ -42,7 +91,7 @@ export default function CategoryBar({ onSelect }: { onSelect: (main: string, sub
   };
 
   return (
-    <div className="fixed top-[102px] md:top-[64px] left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm">
+    <div className={`fixed top-[102px] md:top-[64px] left-0 right-0 z-40 ${barClass(variant)}`}>
       <div className="overflow-x-auto scrollbar-hide">
         <div className="flex items-center justify-start md:justify-center gap-6 px-4 py-3 min-w-max">
           {CATEGORY_CONFIG.map((cat) => {
@@ -59,10 +108,10 @@ export default function CategoryBar({ onSelect }: { onSelect: (main: string, sub
                   }}
                   className="group flex flex-col items-center gap-1.5 min-w-[60px]"
                 >
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all ${isSelected ? "bg-orange-50" : "bg-gray-50"}`}>
-                    <Icon size={20} className={isSelected ? "text-[#FF6321]" : "text-gray-600"} />
+                  <div className={iconBoxClass(variant, isSelected)}>
+                    <Icon size={20} className={iconClass(variant, isSelected)} />
                   </div>
-                  <span className="text-[11px] font-bold flex items-center gap-0.5 text-gray-500 whitespace-nowrap">
+                  <span className={labelClass(variant)}>
                     {localizedMainCategoryName(cat.slug, locale)} <ChevronDown size={10} />
                   </span>
                 </button>
