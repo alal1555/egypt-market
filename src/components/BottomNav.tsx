@@ -6,12 +6,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Compass, Heart, LayoutGrid, PlusCircle, Shield, Crown } from "lucide-react";
 import { useTranslation } from "@/i18n/LocaleProvider";
+import AdminPendingBadge from "@/components/AdminPendingBadge";
+import { usePendingAdsCount } from "@/hooks/usePendingAdsCount";
 
 export default function BottomNav() {
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const pathname = usePathname();
   const { t } = useTranslation();
+  const isAdmin = userRole === "admin" || userRole === "super";
+  const pendingAdsCount = usePendingAdsCount(isAdmin);
 
   useEffect(() => {
     const fetchUserRole = async (userId: string) => {
@@ -86,14 +90,22 @@ export default function BottomNav() {
         <span className="text-[10px] font-bold mt-0.5">{t("nav.myAds")}</span>
       </Link>
 
-      {user && (userRole === "admin" || userRole === "super") && (
+      {user && isAdmin && (
         <Link 
-          href="/admin/dashboard" 
+          href="/admin/dashboard"
+          aria-label={
+            pendingAdsCount > 0
+              ? t("nav.pendingAdsBadge", { count: pendingAdsCount })
+              : undefined
+          }
           className={`relative z-10 flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
             isActive("/admin/dashboard") ? "text-amber-600" : "text-gray-500"
           }`}
         >
-          {userRole === "super" ? <Crown size={20} /> : <Shield size={20} />}
+          <span className="relative">
+            {userRole === "super" ? <Crown size={20} /> : <Shield size={20} />}
+            <AdminPendingBadge count={pendingAdsCount} className="-top-1.5 -end-2" />
+          </span>
           <span className="text-[10px] font-bold mt-0.5">{t("nav.admin")}</span>
         </Link>
       )}

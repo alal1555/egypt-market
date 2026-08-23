@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { computeExpiresAt } from "@/constants/adPricing";
+import { notifyPendingAdsChanged } from "@/hooks/usePendingAdsCount";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { adminAr } from "@/i18n/content/admin.ar";
 import { adminEn, type AdminContent } from "@/i18n/content/admin.en";
@@ -326,6 +327,7 @@ export default function AdminDashboard() {
         prev.map((ad) => (ad.id === id ? { ...ad, ...updates } : ad))
       );
       setExpandedAdId(null);
+      notifyPendingAdsChanged();
     }
     router.refresh(); 
     // OR, if that doesn't work, force a full reload:

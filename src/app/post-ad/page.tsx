@@ -188,8 +188,10 @@ export default function PostAdPage() {
         }
       }
 
+      setUploading(false);
       alert(t("postAd.submitted"));
-      router.push("/my-ads");
+      router.replace("/my-ads");
+      return;
     } catch (err: unknown) {
       let message = err instanceof Error ? err.message : t("postAd.somethingWrong");
       if (err instanceof DOMException && err.name === "TimeoutError") {

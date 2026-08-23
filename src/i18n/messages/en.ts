@@ -13,6 +13,7 @@ export const en = {
     adminPanel: "Admin Panel",
     supremeAdmin: "Supreme Admin",
     admin: "Admin",
+    pendingAdsBadge: "{count} ads pending approval",
   },
   footer: {
     tagline: "Buy and sell cars, properties, electronics, and more across Egypt.",
@@ -327,6 +328,7 @@ export const en = {
     renew: "Renew ({price} EGP)",
     edit: "Edit",
     delete: "Delete",
+    deleteFailed: "Could not delete listing.",
   },
   editAd: {
     unauthorized: "Unauthorized or not found",

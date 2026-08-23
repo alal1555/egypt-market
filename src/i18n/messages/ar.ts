@@ -13,6 +13,7 @@ export const ar = {
     adminPanel: "لوحة الإدارة",
     supremeAdmin: "المدير الأعلى",
     admin: "إدارة",
+    pendingAdsBadge: "{count} إعلان بانتظار الموافقة",
   },
   footer: {
     tagline: "اشتري وبيع سيارات وعقارات وإلكترونيات والمزيد في جميع أنحاء مصر.",
@@ -327,6 +328,7 @@ export const ar = {
     renew: "تجديد ({price} ج.م)",
     edit: "تعديل",
     delete: "حذف",
+    deleteFailed: "تعذّر حذف الإعلان.",
   },
   editAd: {
     unauthorized: "غير مصرح أو غير موجود",

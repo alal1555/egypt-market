@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { getSessionUser, readStoredAccessToken } from "@/lib/auth-client";
+import { restDeleteMyAd, restFetchMyAds, type MyAdRow } from "@/lib/my-ads-api";
 import AdCard from "@/components/AdCard";
 import Link from "next/link";
 import { Trash2, Edit3, Plus, RefreshCw, CalendarClock } from "lucide-react";
@@ -18,20 +20,7 @@ import { getDisplayPrice, isAuctionListing, type AuctionAdFields } from "@/const
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
 import ShareAdMenu from "@/components/ShareAdMenu";
 
-interface Ad extends AuctionAdFields {
-  id: string;
-  title: string;
-  price: number;
-  location: string;
-  description?: string | null;
-  seller_phone?: string | null;
-  category_slug: string;
-  images: string[];
-  status: string;
-  attributes?: any;
-  created_at: string;
-  expires_at?: string | null;
-}
+interface Ad extends AuctionAdFields, MyAdRow {}
 
 export default function MyAdsPage() {
   const [ads, setAds] = useState<Ad[]>([]);
@@ -44,43 +33,67 @@ export default function MyAdsPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
+    let active = true;
+
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const sessionUser = await getSessionUser();
+      if (!active) return;
+
+      if (!sessionUser) {
         setLoading(false);
         return;
       }
-      setUser(user);
+      setUser(sessionUser);
 
-      const [adsRes, makesRes, modelsRes] = await Promise.all([
-        supabase
-          .from("ads")
-          .select(
-            "id, title, price, location, description, seller_phone, category_slug, images, status, attributes, created_at, expires_at, listing_type, auction_status, auction_current_bid, auction_bid_count, auction_ends_at",
-          )
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase.from("makes").select("id, name"),
-        supabase.from("models").select("id, name"),
+      const accessToken = readStoredAccessToken();
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+      const [adsList, makesRes, modelsRes] = await Promise.all([
+        accessToken
+          ? restFetchMyAds(accessToken, sessionUser.id)
+          : Promise.resolve([] as MyAdRow[]),
+        fetch(`${supabaseUrl}/rest/v1/makes?select=id,name`, {
+          headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` },
+          signal: AbortSignal.timeout(12_000),
+        }),
+        fetch(`${supabaseUrl}/rest/v1/models?select=id,name`, {
+          headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` },
+          signal: AbortSignal.timeout(12_000),
+        }),
       ]);
 
-      if (adsRes.data) setAds(adsRes.data as Ad[]);
-      if (makesRes.data) setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
-      if (modelsRes.data) setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
+      if (!active) return;
+
+      setAds(adsList as Ad[]);
+
+      if (makesRes.ok) {
+        const makes = (await makesRes.json()) as { id: number; name: string }[];
+        setMakesMap(Object.fromEntries(makes.map((m) => [m.id, m.name])));
+      }
+      if (modelsRes.ok) {
+        const models = (await modelsRes.json()) as { id: number; name: string }[];
+        setModelsMap(Object.fromEntries(models.map((m) => [m.id, m.name])));
+      }
 
       setLoading(false);
     }
-    init();
+
+    void init();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleDelete = async (adId: string) => {
     if (!window.confirm(t("myAds.deleteConfirm"))) return;
 
     setDeletingId(adId);
-    const { error } = await supabase.from("ads").delete().eq("id", adId);
+    const accessToken = readStoredAccessToken();
+    const ok = accessToken ? await restDeleteMyAd(accessToken, adId) : false;
 
-    if (error) {
-      alert(t("myAds.errorPrefix") + error.message);
+    if (!ok) {
+      alert(t("myAds.errorPrefix") + t("myAds.deleteFailed"));
     } else {
       setAds((prev) => prev.filter((ad) => ad.id !== adId));
     }

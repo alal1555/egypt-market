@@ -8,6 +8,8 @@ import { Search, Compass, Heart, Shield, Crown, LayoutGrid, PlusCircle, User } f
 import { HOME_REFRESH_EVENT } from "@/lib/home";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import AdminPendingBadge from "@/components/AdminPendingBadge";
+import { usePendingAdsCount } from "@/hooks/usePendingAdsCount";
 
 function NavbarContent() {
   const [user, setUser] = useState<any>(null);
@@ -17,6 +19,8 @@ function NavbarContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
+  const isAdmin = userRole === "admin" || userRole === "super";
+  const pendingAdsCount = usePendingAdsCount(isAdmin);
 
   // Sync the search input with the URL 'q' parameter
   useEffect(() => {
@@ -112,12 +116,20 @@ function NavbarContent() {
 
           {user ? (
             <div className="flex items-center gap-4">
-              {(userRole === "admin" || userRole === "super") && (
-                <Link href="/admin/dashboard" className={`font-bold px-3 py-1.5 rounded-xl transition text-xs flex items-center gap-1.5 ${
+              {isAdmin && (
+                <Link
+                  href="/admin/dashboard"
+                  aria-label={
+                    pendingAdsCount > 0
+                      ? t("nav.pendingAdsBadge", { count: pendingAdsCount })
+                      : undefined
+                  }
+                  className={`relative font-bold px-3 py-1.5 rounded-xl transition text-xs flex items-center gap-1.5 ${
                   userRole === "super" ? "text-amber-700 bg-amber-50 border border-amber-200" : "text-[#FF6321] bg-orange-50"
                 }`}>
                   {userRole === "super" ? <Crown size={14} /> : <Shield size={14} />}
                   <span>{userRole === "super" ? t("nav.supremeAdmin") : t("nav.adminPanel")}</span>
+                  <AdminPendingBadge count={pendingAdsCount} className="-top-2 -end-2" />
                 </Link>
               )}
 
