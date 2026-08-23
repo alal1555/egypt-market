@@ -21,6 +21,7 @@ export type AuctionAdFields = {
   auction_current_bid?: number | null;
   auction_winner_id?: string | null;
   auction_bid_count?: number;
+  auction_verification_code?: string | null;
 };
 
 export function isAuctionListing(ad: { listing_type?: string | null }): boolean {
@@ -30,6 +31,18 @@ export function isAuctionListing(ad: { listing_type?: string | null }): boolean 
 export function isAuctionLive(ad: AuctionAdFields): boolean {
   if (!isAuctionListing(ad) || ad.auction_status !== "live" || !ad.auction_ends_at) return false;
   return new Date(ad.auction_ends_at) > new Date();
+}
+
+export function isAuctionFinished(ad: AuctionAdFields): boolean {
+  return (
+    ad.auction_status === "ended" ||
+    ad.auction_status === "no_sale" ||
+    ad.auction_status === "sold"
+  );
+}
+
+export function isAuctionWon(ad: AuctionAdFields): boolean {
+  return ad.auction_status === "ended" || ad.auction_status === "sold";
 }
 
 export function getMinimumBid(ad: AuctionAdFields & { price: number }): number {

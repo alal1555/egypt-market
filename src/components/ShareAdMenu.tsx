@@ -127,10 +127,9 @@ export default function ShareAdMenu({
 
   const ensurePayload = useCallback(async (): Promise<ShareAdPayload> => {
     const productUrl = getShareProductUrl(ad.id);
+    const imageUrl = ad.images?.[0] ?? null;
     const [img, qr] = await Promise.all([
-      imageDataUrl !== null || !ad.images?.[0]
-        ? Promise.resolve(imageDataUrl)
-        : fetchImageAsDataUrl(ad.images[0]),
+      imageUrl ? fetchImageAsDataUrl(imageUrl) : Promise.resolve(null),
       qrDataUrl ? Promise.resolve(qrDataUrl) : generateQrDataUrl(productUrl),
     ]);
     if (img !== imageDataUrl) setImageDataUrl(img);

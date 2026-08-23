@@ -2,12 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Gavel, Clock, TrendingUp } from "lucide-react";
+import { Gavel, Clock, TrendingUp, Phone, MessageCircle, Trophy, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { readStoredAccessToken } from "@/lib/auth-client";
+import { formatPhoneForLink } from "@/lib/utils";
 import {
   fetchAuctionBids,
   restCloseExpiredAuctions,
+  restFetchAdAuctionFields,
+  restFetchAuctionWinnerContact,
+  restFetchAuctionWinnerVerification,
   restPlaceAuctionBid,
   type AdWithAuction,
   type AuctionBidRow,
@@ -18,6 +22,7 @@ import {
   getMinimumBid,
   isAuctionLive,
   isAuctionListing,
+  isAuctionWon,
 } from "@/constants/auction";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
@@ -35,10 +40,24 @@ export default function AuctionPanel({ ad, onAdUpdate }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ text: string; tone: "error" | "success" } | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [winnerContact, setWinnerContact] = useState<{
+    full_name: string;
+    phone: string;
+    verification_code: string;
+  } | null>(null);
+  const [winnerVerificationCode, setWinnerVerificationCode] = useState<string | null>(null);
 
   const live = isAuctionLive(ad);
   const minBid = getMinimumBid(ad);
   const isSeller = userId === ad.user_id;
+  const isWinner = Boolean(userId && ad.auction_winner_id && userId === ad.auction_winner_id);
+  const auctionWon = isAuctionWon(ad);
+
+  const refreshAuctionState = useCallback(async () => {
+    await restCloseExpiredAuctions();
+    const patch = await restFetchAdAuctionFields(ad.id);
+    if (patch) onAdUpdate(patch);
+  }, [ad.id, onAdUpdate]);
 
   const refreshBids = useCallback(async () => {
     const rows = await fetchAuctionBids(ad.id, 8);
@@ -56,13 +75,53 @@ export default function AuctionPanel({ ad, onAdUpdate }: Props) {
 
   useEffect(() => {
     if (!live && ad.auction_ends_at && new Date(ad.auction_ends_at).getTime() <= nowMs) {
-      void restCloseExpiredAuctions().then(() => {
-        if (ad.auction_status === "live") {
-          onAdUpdate({ auction_status: "ended" });
-        }
-      });
+      void refreshAuctionState();
     }
-  }, [live, ad.auction_ends_at, ad.auction_status, nowMs, onAdUpdate]);
+  }, [live, ad.auction_ends_at, nowMs, refreshAuctionState]);
+
+  useEffect(() => {
+    if (!isSeller || !auctionWon) {
+      setWinnerContact(null);
+      return;
+    }
+
+    const accessToken = readStoredAccessToken();
+    if (!accessToken) return;
+
+    let active = true;
+    void restFetchAuctionWinnerContact(accessToken, ad.id).then((result) => {
+      if (!active || !result.ok) return;
+      setWinnerContact({
+        full_name: result.full_name,
+        phone: result.phone,
+        verification_code: result.verification_code,
+      });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [ad.id, auctionWon, isSeller]);
+
+  useEffect(() => {
+    if (!isWinner || isSeller || !auctionWon) {
+      setWinnerVerificationCode(null);
+      return;
+    }
+
+    const accessToken = readStoredAccessToken();
+    if (!accessToken) return;
+
+    let active = true;
+    void restFetchAuctionWinnerVerification(accessToken, ad.id).then((result) => {
+      if (!active || !result.ok || !result.verification_code) return;
+      setWinnerVerificationCode(result.verification_code);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [ad.id, auctionWon, isSeller, isWinner]);
 
   useEffect(() => {
     void refreshBids();
@@ -94,11 +153,14 @@ export default function AuctionPanel({ ad, onAdUpdate }: Props) {
   const countdown = ad.auction_ends_at ? formatAuctionCountdown(ad.auction_ends_at, nowMs) : null;
 
   const statusLabel = useMemo(() => {
-    if (ad.auction_status === "ended") return t("auction.statusEnded");
+    const timeExpired =
+      ad.auction_ends_at != null && new Date(ad.auction_ends_at).getTime() <= nowMs;
+    if (ad.auction_status === "ended" || ad.auction_status === "sold") return t("auction.statusEnded");
     if (ad.auction_status === "no_sale") return t("auction.statusNoSale");
     if (live) return t("auction.statusLive");
+    if (timeExpired) return t("auction.statusEnded");
     return t("auction.statusPending");
-  }, [ad.auction_status, live, t]);
+  }, [ad.auction_ends_at, ad.auction_status, live, nowMs, t]);
 
   const handleBid = async () => {
     setMessage(null);
@@ -197,12 +259,63 @@ export default function AuctionPanel({ ad, onAdUpdate }: Props) {
 
       <p className="text-sm font-semibold text-gray-700">{statusLabel}</p>
 
-      {ad.auction_status === "ended" && ad.auction_current_bid != null && (
+      {auctionWon && ad.auction_current_bid != null && (
         <p className="text-sm text-emerald-700 font-medium bg-emerald-50 rounded-xl p-3">
           {t("auction.winningBid", {
             amount: Number(ad.auction_current_bid).toLocaleString(),
           })}
         </p>
+      )}
+
+      {auctionWon && isWinner && !isSeller && (
+        <div className="space-y-3">
+          <p className="text-sm text-emerald-800 font-bold bg-emerald-50 rounded-xl p-3 flex items-center gap-2">
+            <Trophy size={18} />
+            {t("auction.youWon")}
+          </p>
+          {winnerVerificationCode ? (
+            <VerificationCodeBlock code={winnerVerificationCode} role="winner" t={t} />
+          ) : null}
+        </div>
+      )}
+
+      {auctionWon && isSeller && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3">
+          <p className="text-sm font-black text-emerald-900">{t("auction.winnerTitle")}</p>
+          {winnerContact?.verification_code ? (
+            <VerificationCodeBlock code={winnerContact.verification_code} role="seller" t={t} />
+          ) : null}
+          {winnerContact?.full_name ? (
+            <p className="text-sm font-semibold text-gray-800">
+              {t("auction.winnerName", {
+                name: winnerContact.full_name,
+              })}
+            </p>
+          ) : null}
+          {winnerContact?.phone ? (
+            <div className="space-y-2">
+              <p className="text-sm font-bold text-gray-900">{winnerContact.phone}</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <a
+                  href={`tel:+${formatPhoneForLink(winnerContact.phone)}`}
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#FF6321] py-2.5 rounded-xl font-bold text-white text-sm hover:bg-[#e85a1e]"
+                >
+                  <Phone size={16} /> {t("auction.callWinner")}
+                </a>
+                <a
+                  href={`https://wa.me/${formatPhoneForLink(winnerContact.phone)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 border-2 border-[#FF6321] py-2.5 rounded-xl font-bold text-[#FF6321] text-sm hover:bg-orange-50"
+                >
+                  <MessageCircle size={16} /> {t("auction.whatsappWinner")}
+                </a>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-600">{t("auction.winnerNoPhone")}</p>
+          )}
+        </div>
       )}
 
       {ad.auction_status === "no_sale" && (
@@ -288,6 +401,29 @@ export default function AuctionPanel({ ad, onAdUpdate }: Props) {
       )}
 
       <p className="text-[11px] text-gray-400 leading-relaxed">{t("auction.disclaimer")}</p>
+    </div>
+  );
+}
+
+function VerificationCodeBlock({
+  code,
+  role,
+  t,
+}: {
+  code: string;
+  role: "seller" | "winner";
+  t: (key: string) => string;
+}) {
+  return (
+    <div className="rounded-xl border-2 border-dashed border-orange-300 bg-orange-50 p-4">
+      <div className="flex items-center gap-2 text-orange-900 mb-2">
+        <ShieldCheck size={16} />
+        <p className="text-xs font-bold uppercase tracking-wide">{t("auction.verificationTitle")}</p>
+      </div>
+      <p className="font-mono text-2xl font-black text-[#FF6321] tracking-[0.2em]">{code}</p>
+      <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+        {role === "seller" ? t("auction.verificationSellerHint") : t("auction.verificationWinnerHint")}
+      </p>
     </div>
   );
 }

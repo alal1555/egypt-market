@@ -16,7 +16,7 @@ import {
   localizedSubCategoryName,
 } from "@/i18n/catalog";
 import { restCloseExpiredAuctions, type AdWithAuction } from "@/lib/auction";
-import { getDisplayPrice, isAuctionListing, isAuctionLive } from "@/constants/auction";
+import { getDisplayPrice, isAuctionListing, isAuctionWon } from "@/constants/auction";
 
 export default function ProductPage() {
   const params = useParams();
@@ -27,6 +27,7 @@ export default function ProductPage() {
 
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
+  const [userId, setUserId] = useState<string | null>(null);
   const { t, locale } = useTranslation();
 
   const patchAd = useCallback((patch: Partial<AdWithAuction>) => {
@@ -69,6 +70,13 @@ export default function ProductPage() {
     fetchFullData();
   }, [params.id]);
 
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null);
+    });
+    return () => authListener.subscription.unsubscribe();
+  }, []);
+
   if (loading) return <div className="min-h-[60vh] flex items-center justify-center">{t("common.loading")}</div>;
   if (!ad) return <div className="min-h-[60vh] flex items-center justify-center">{t("product.notFound")}</div>;
 
@@ -82,8 +90,8 @@ export default function ProductPage() {
   const phoneLink = ad.seller_phone ? formatPhoneForLink(ad.seller_phone) : null;
   const auction = isAuctionListing(ad);
   const displayPrice = getDisplayPrice(ad);
-  const showContact =
-    !auction || !isAuctionLive(ad) || ad.auction_status === "ended";
+  const isSeller = userId === ad.user_id;
+  const showContact = phoneLink && (!auction || (isAuctionWon(ad) && !isSeller));
 
   return (
     <div className="min-h-screen bg-gray-50">

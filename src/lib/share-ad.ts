@@ -30,6 +30,7 @@ export type ShareAdPayload = {
   description: string;
   categoryLabel: string;
   imageDataUrl: string | null;
+  imageUrl: string | null;
   specs: ShareAdSpec[];
   sellerPhone: string | null;
   isAuction: boolean;
@@ -87,19 +88,63 @@ export function getShareProductUrl(adId: string): string {
 }
 
 export async function fetchImageAsDataUrl(url: string): Promise<string | null> {
+  const blob = await fetchImageBlob(url);
+  if (!blob) return null;
+  return blobToJpegDataUrl(blob);
+}
+
+async function fetchImageBlob(url: string): Promise<Blob | null> {
   try {
     const res = await fetch(url, { mode: "cors" });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
+    if (res.ok) return await res.blob();
+  } catch {
+    /* direct fetch blocked — try same-origin proxy */
+  }
+
+  try {
+    const proxy = `/api/share/image?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxy);
+    if (res.ok) return await res.blob();
   } catch {
     return null;
   }
+
+  return null;
+}
+
+/** react-pdf reliably renders JPEG/PNG data URLs (not WebP). */
+async function blobToJpegDataUrl(blob: Blob): Promise<string | null> {
+  if (typeof document === "undefined") return null;
+
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const maxW = 1200;
+        const scale = Math.min(1, maxW / Math.max(img.naturalWidth, 1));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.88));
+      } catch {
+        resolve(null);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(null);
+    };
+    img.src = objectUrl;
+  });
 }
 
 export async function generateQrDataUrl(text: string): Promise<string> {
@@ -225,6 +270,7 @@ export function buildSharePayload(input: BuildShareInput): ShareAdPayload {
     description: (input.description || "").trim(),
     categoryLabel: input.categoryLabel,
     imageDataUrl: input.imageDataUrl ?? null,
+    imageUrl: input.images?.[0] ?? null,
     specs: input.specs.slice(0, 4),
     sellerPhone: input.seller_phone ?? null,
     isAuction: isAuctionListing({ listing_type: input.listing_type }),

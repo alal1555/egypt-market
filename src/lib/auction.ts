@@ -62,6 +62,65 @@ export async function restPlaceAuctionBid(
   return data;
 }
 
+export type AuctionWinnerContact =
+  | { ok: true; winner_id: string; full_name: string; phone: string; verification_code: string }
+  | { ok: false; error: string };
+
+export type AuctionWinnerVerification =
+  | { ok: true; verification_code: string }
+  | { ok: false; error: string };
+
+export async function restFetchAuctionWinnerContact(
+  accessToken: string,
+  adId: string,
+): Promise<AuctionWinnerContact> {
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_auction_winner_contact`, {
+    method: "POST",
+    headers: headers(accessToken, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ p_ad_id: adId }),
+    signal: AbortSignal.timeout(12_000),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as AuctionWinnerContact;
+  if (!res.ok) {
+    const msg = (data as { message?: string }).message;
+    return { ok: false, error: msg || "fetch_failed" };
+  }
+  return data;
+}
+
+export async function restFetchAuctionWinnerVerification(
+  accessToken: string,
+  adId: string,
+): Promise<AuctionWinnerVerification> {
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_auction_winner_verification`, {
+    method: "POST",
+    headers: headers(accessToken, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ p_ad_id: adId }),
+    signal: AbortSignal.timeout(12_000),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as AuctionWinnerVerification;
+  if (!res.ok) {
+    const msg = (data as { message?: string }).message;
+    return { ok: false, error: msg || "fetch_failed" };
+  }
+  return data;
+}
+
+export async function restFetchAdAuctionFields(adId: string): Promise<Partial<AdWithAuction> | null> {
+  const url =
+    `${supabaseUrl}/rest/v1/ads` +
+    `?select=auction_status,auction_winner_id,auction_current_bid,auction_bid_count,auction_ends_at` +
+    `&id=eq.${encodeURIComponent(adId)}` +
+    `&limit=1`;
+
+  const res = await fetch(url, { headers: headers(), signal: AbortSignal.timeout(12_000) });
+  if (!res.ok) return null;
+  const rows = (await res.json()) as Partial<AdWithAuction>[];
+  return rows[0] ?? null;
+}
+
 export async function fetchAuctionBids(adId: string, limit = 10): Promise<AuctionBidRow[]> {
   const url =
     `${supabaseUrl}/rest/v1/auction_bids` +

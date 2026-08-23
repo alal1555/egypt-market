@@ -200,9 +200,9 @@ export default function ShareAdPdfDocument({ data, locale }: Props) {
         </View>
 
         <View style={styles.hero}>
-          {data.imageDataUrl ? (
+          {(data.imageDataUrl ?? data.imageUrl) ? (
             // eslint-disable-next-line jsx-a11y/alt-text
-            <Image src={data.imageDataUrl} style={styles.heroImage} />
+            <Image src={data.imageDataUrl ?? data.imageUrl!} style={styles.heroImage} />
           ) : null}
           {data.isAuction && (
             <Text style={styles.auctionBadge}>{isAr ? "مزاد" : "Auction"}</Text>

@@ -40,6 +40,15 @@ alter table public.ads
 alter table public.ads
   add column if not exists auction_bid_count integer not null default 0;
 
+alter table public.ads
+  add column if not exists auction_verification_code text
+    check (
+      auction_verification_code is null
+      or auction_verification_code ~ '^YAD-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}$'
+    );
+
+comment on column public.ads.auction_verification_code is 'Shared secret shown to seller + winner after a successful auction';
+
 create index if not exists ads_auction_live_idx
   on public.ads (auction_ends_at)
   where listing_type = 'auction' and auction_status = 'live';
@@ -109,6 +118,54 @@ create policy "ads_select_active"
 -- ---------------------------------------------------------------------------
 -- Close auctions whose timer has passed
 -- ---------------------------------------------------------------------------
+create or replace function public.generate_auction_verification_code()
+returns text
+language plpgsql
+as $$
+declare
+  v_chars text := '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  v_code text := 'YAD-';
+  i integer;
+begin
+  for i in 1..4 loop
+    v_code := v_code || substr(v_chars, 1 + floor(random() * length(v_chars))::int, 1);
+  end loop;
+  return v_code;
+end;
+$$;
+
+create or replace function public.ensure_auction_verification_code(p_ad_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_ad public.ads%rowtype;
+  v_code text;
+begin
+  select * into v_ad from public.ads where id = p_ad_id;
+  if not found then
+    return null;
+  end if;
+
+  if v_ad.auction_verification_code is not null then
+    return v_ad.auction_verification_code;
+  end if;
+
+  if v_ad.auction_status not in ('ended', 'sold') or v_ad.auction_winner_id is null then
+    return null;
+  end if;
+
+  v_code := public.generate_auction_verification_code();
+  update public.ads
+  set auction_verification_code = v_code
+  where id = p_ad_id;
+
+  return v_code;
+end;
+$$;
+
 create or replace function public.close_expired_auctions()
 returns integer
 language plpgsql
@@ -119,6 +176,7 @@ declare
   v_closed integer := 0;
   v_ad public.ads%rowtype;
   v_reserve_ok boolean;
+  v_winner_id uuid;
 begin
   for v_ad in
     select *
@@ -136,10 +194,26 @@ begin
       );
 
     if v_ad.auction_bid_count > 0 and v_reserve_ok then
+      v_winner_id := coalesce(
+        v_ad.auction_winner_id,
+        (
+          select ab.user_id
+          from public.auction_bids ab
+          where ab.ad_id = v_ad.id
+          order by ab.amount desc, ab.created_at desc
+          limit 1
+        )
+      );
+
       update public.ads
       set
         auction_status = 'ended',
-        price = coalesce(v_ad.auction_current_bid, v_ad.price)
+        price = coalesce(v_ad.auction_current_bid, v_ad.price),
+        auction_winner_id = v_winner_id,
+        auction_verification_code = coalesce(
+          v_ad.auction_verification_code,
+          public.generate_auction_verification_code()
+        )
       where id = v_ad.id;
     else
       update public.ads
@@ -246,6 +320,116 @@ $$;
 
 grant execute on function public.close_expired_auctions() to anon, authenticated;
 grant execute on function public.place_auction_bid(uuid, numeric) to authenticated;
+
+-- Seller-only: winner name + phone after auction ends
+create or replace function public.get_auction_winner_contact(p_ad_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_ad public.ads%rowtype;
+  v_winner_id uuid;
+  v_phone text;
+  v_name text;
+  v_code text;
+begin
+  if v_uid is null then
+    return jsonb_build_object('ok', false, 'error', 'not_authenticated');
+  end if;
+
+  select * into v_ad from public.ads where id = p_ad_id;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'ad_not_found');
+  end if;
+
+  if v_ad.user_id <> v_uid then
+    return jsonb_build_object('ok', false, 'error', 'not_owner');
+  end if;
+
+  if v_ad.auction_status not in ('ended', 'sold') then
+    return jsonb_build_object('ok', false, 'error', 'auction_not_finished');
+  end if;
+
+  v_winner_id := v_ad.auction_winner_id;
+  if v_winner_id is null then
+    select ab.user_id into v_winner_id
+    from public.auction_bids ab
+    where ab.ad_id = p_ad_id
+    order by ab.amount desc, ab.created_at desc
+    limit 1;
+  end if;
+
+  if v_winner_id is null then
+    return jsonb_build_object('ok', false, 'error', 'no_winner');
+  end if;
+
+  select
+    nullif(trim(u.raw_user_meta_data->>'phone_number'), ''),
+    coalesce(
+      nullif(trim(p.full_name), ''),
+      nullif(trim(u.raw_user_meta_data->>'full_name'), '')
+    )
+  into v_phone, v_name
+  from auth.users u
+  left join public.profiles p on p.id = u.id
+  where u.id = v_winner_id;
+
+  v_code := public.ensure_auction_verification_code(p_ad_id);
+
+  return jsonb_build_object(
+    'ok', true,
+    'winner_id', v_winner_id,
+    'full_name', coalesce(v_name, ''),
+    'phone', coalesce(v_phone, ''),
+    'verification_code', coalesce(v_code, '')
+  );
+end;
+$$;
+
+grant execute on function public.get_auction_winner_contact(uuid) to authenticated;
+
+-- Winner-only: shared verification code after auction ends
+create or replace function public.get_auction_winner_verification(p_ad_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_ad public.ads%rowtype;
+  v_code text;
+begin
+  if v_uid is null then
+    return jsonb_build_object('ok', false, 'error', 'not_authenticated');
+  end if;
+
+  select * into v_ad from public.ads where id = p_ad_id;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'ad_not_found');
+  end if;
+
+  if v_ad.auction_status not in ('ended', 'sold') then
+    return jsonb_build_object('ok', false, 'error', 'auction_not_finished');
+  end if;
+
+  if v_ad.auction_winner_id is distinct from v_uid then
+    return jsonb_build_object('ok', false, 'error', 'not_winner');
+  end if;
+
+  v_code := public.ensure_auction_verification_code(p_ad_id);
+
+  return jsonb_build_object(
+    'ok', true,
+    'verification_code', coalesce(v_code, '')
+  );
+end;
+$$;
+
+grant execute on function public.get_auction_winner_verification(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Auction listings post for free (skip wallet charge)
