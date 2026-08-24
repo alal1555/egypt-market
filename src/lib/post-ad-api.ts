@@ -38,6 +38,20 @@ export async function restCanPostAd(
   return (await res.json()) as CanPostResult;
 }
 
+export async function restCanPostAuction(
+  accessToken: string,
+  price: number = AD_POST_PRICE_EGP,
+): Promise<CanPostResult> {
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/can_post_auction`, {
+    method: "POST",
+    headers: authHeaders(accessToken, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ p_price: price }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) await throwApiError(res, "Credit check failed");
+  return (await res.json()) as CanPostResult;
+}
+
 export async function restUploadAdImage(
   accessToken: string,
   userId: string,

@@ -11,13 +11,15 @@ import {
 } from "@/lib/akedly-client";
 import {
   AD_POST_PRICE_EGP,
+  EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
   WELCOME_BALANCE_EGP,
-  WELCOME_FREE_ADS,
   WalletProfile,
   adsRemainingFromBalance,
+  grantEmailVerificationBonus,
   isBalanceExpired,
   normalizeEgyptPhone,
 } from "@/lib/wallet";
+import { getAccessToken } from "@/lib/auth-client";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -82,6 +84,7 @@ type GrantWelcomeResult = {
   ok?: boolean;
   error?: string;
   free_ads_remaining?: number;
+  free_auctions_remaining?: number;
   balance?: number;
   balance_expires_at?: string | null;
   already_granted?: boolean;
@@ -134,12 +137,16 @@ export default function ProfileClient() {
   const [verifying, setVerifying] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [verifyTone, setVerifyTone] = useState<"success" | "error" | null>(null);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
   const { t } = useTranslation();
+
+  const emailConfirmed = Boolean(user?.email_confirmed_at);
 
   const loadWallet = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("free_ads_remaining, balance, balance_expires_at, phone_verified, welcome_credits_granted")
+      .select("free_ads_remaining, free_auctions_remaining, balance, balance_expires_at, phone_verified, email_verification_bonus_granted, welcome_credits_granted")
       .eq("id", userId)
       .maybeSingle();
     if (data) setWallet(data as WalletProfile);
@@ -166,7 +173,7 @@ export default function ProfileClient() {
         }
         supabase
           .from("profiles")
-          .select("role, free_ads_remaining, balance, balance_expires_at, phone_verified, welcome_credits_granted")
+          .select("role, free_ads_remaining, free_auctions_remaining, balance, balance_expires_at, phone_verified, email_verification_bonus_granted, welcome_credits_granted")
           .eq("id", authUser.id)
           .maybeSingle()
           .then(({ data: profile }) => {
@@ -174,11 +181,34 @@ export default function ProfileClient() {
               if (profile.role) setRole(profile.role);
               setWallet({
                 free_ads_remaining: profile.free_ads_remaining ?? 0,
+                free_auctions_remaining: profile.free_auctions_remaining ?? 0,
                 balance: Number(profile.balance ?? 0),
                 balance_expires_at: profile.balance_expires_at,
                 phone_verified: profile.phone_verified ?? false,
+                email_verification_bonus_granted: profile.email_verification_bonus_granted ?? false,
                 welcome_credits_granted: profile.welcome_credits_granted ?? false,
               });
+              if (authUser.email_confirmed_at && !profile.email_verification_bonus_granted) {
+                void getAccessToken()
+                  .then((token) => grantEmailVerificationBonus(token))
+                  .then((granted) => {
+                    if (!granted.ok && granted.error === "email_not_verified") return;
+                    if (granted.free_ads_remaining != null || granted.free_auctions_remaining != null) {
+                      setWallet((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              free_ads_remaining: granted.free_ads_remaining ?? prev.free_ads_remaining,
+                              free_auctions_remaining:
+                                granted.free_auctions_remaining ?? prev.free_auctions_remaining,
+                              email_verification_bonus_granted: true,
+                            }
+                          : prev,
+                      );
+                    }
+                  })
+                  .catch(() => undefined);
+              }
             }
             if (active) setLoading(false);
           });
@@ -204,6 +234,27 @@ export default function ProfileClient() {
       window.clearTimeout(timeout);
     };
   }, []);
+
+  const handleResendEmail = async () => {
+    if (!user?.email) return;
+    setResendingEmail(true);
+    setEmailMessage(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: user.email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=email`,
+        },
+      });
+      if (error) throw error;
+      setEmailMessage(t("profile.emailResent"));
+    } catch (err) {
+      setEmailMessage(err instanceof Error ? err.message : t("profile.emailResendFailed"));
+    } finally {
+      setResendingEmail(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,6 +371,7 @@ export default function ProfileClient() {
       const granted = await grantWelcomeCredits(accessToken);
       setWallet((prev) => ({
         free_ads_remaining: granted.free_ads_remaining ?? prev?.free_ads_remaining ?? 0,
+        free_auctions_remaining: granted.free_auctions_remaining ?? prev?.free_auctions_remaining ?? 0,
         balance: Number(granted.balance ?? prev?.balance ?? 0),
         balance_expires_at: granted.balance_expires_at ?? prev?.balance_expires_at ?? null,
         phone_verified: true,
@@ -331,7 +383,11 @@ export default function ProfileClient() {
       setOtpPhone("");
       setTransactionReqId("");
       setDeliveryChannels([]);
-      setVerifyMessage(t("profile.phoneVerified", { amount: WELCOME_BALANCE_EGP }));
+      setVerifyMessage(
+        t("profile.phoneVerified", {
+          amount: WELCOME_BALANCE_EGP,
+        }),
+      );
       setVerifyTone("success");
     } catch (err) {
       if (err instanceof DOMException && err.name === "TimeoutError") {
@@ -424,7 +480,7 @@ export default function ProfileClient() {
             {t("profile.walletTitle")}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
               <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAds")}</p>
               <p className="text-2xl font-black text-[#FF6321]">{wallet?.free_ads_remaining ?? 0}</p>
@@ -432,25 +488,30 @@ export default function ProfileClient() {
                 <p className="text-[10px] text-gray-400 mt-1">{t("profile.starterPack")}</p>
               )}
             </div>
+            {wallet?.email_verification_bonus_granted ? (
+              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAuctions")}</p>
+                <p className="text-2xl font-black text-[#FF6321]">{wallet.free_auctions_remaining ?? 0}</p>
+              </div>
+            ) : null}
             {wallet?.phone_verified ? (
-              <>
-                <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-                  <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
-                  <p className="text-2xl font-black text-[#FF6321]">{wallet.balance} {t("common.egp")}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-gray-50 border">
-                  <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.paidAdsLeft")}</p>
-                  <p className="text-2xl font-black text-gray-800">
-                    {adsRemainingFromBalance(
+              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
+                <p className="text-2xl font-black text-[#FF6321]">
+                  {wallet.balance} {t("common.egp")}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {t("profile.walletAdsHint", {
+                    count: adsRemainingFromBalance(
                       wallet.balance,
-                      isBalanceExpired(wallet.balance_expires_at)
-                    )}
-                  </p>
-                  <p className="text-[10px] text-gray-400 mt-1">{t("profile.perAd", { price: AD_POST_PRICE_EGP })}</p>
-                </div>
-              </>
+                      isBalanceExpired(wallet.balance_expires_at),
+                    ),
+                    price: AD_POST_PRICE_EGP,
+                  })}
+                </p>
+              </div>
             ) : (
-              <div className="p-4 rounded-xl bg-gray-50 border sm:col-span-2">
+              <div className="p-4 rounded-xl bg-gray-50 border sm:col-span-3">
                 <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
                 <p className="text-lg font-black text-gray-700 mt-1">
                   {t("profile.unlockBalance", { amount: WELCOME_BALANCE_EGP })}
@@ -462,6 +523,29 @@ export default function ProfileClient() {
             )}
           </div>
 
+          {!emailConfirmed && (
+            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 mb-4">
+              <p className="flex items-center gap-2 font-bold text-blue-900 mb-2">
+                <Mail size={18} />
+                {t("profile.emailVerifyTitle")}
+              </p>
+              <p className="text-sm text-blue-800 mb-3">
+                {t("profile.emailUnlockDesc", {
+                  bonusFreeAuctions: EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
+                })}
+              </p>
+              <button
+                type="button"
+                onClick={handleResendEmail}
+                disabled={resendingEmail}
+                className="px-4 py-2 rounded-xl bg-[#FF6321] text-white text-sm font-bold hover:bg-[#e85a1e] disabled:opacity-60"
+              >
+                {resendingEmail ? t("profile.sending") : t("profile.resendEmail")}
+              </button>
+              {emailMessage ? <p className="text-xs text-blue-800 mt-2">{emailMessage}</p> : null}
+            </div>
+          )}
+
           {!wallet?.phone_verified && (
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
               <p className="flex items-center gap-2 font-bold text-amber-900 mb-2">
@@ -469,7 +553,7 @@ export default function ProfileClient() {
                 {t("profile.unlockTitle", { amount: WELCOME_BALANCE_EGP })}
               </p>
               <p className="text-sm text-amber-800 mb-4">
-                {t("profile.unlockDesc", { freeAds: WELCOME_FREE_ADS, amount: WELCOME_BALANCE_EGP })}
+                {t("profile.phoneUnlockDesc", { amount: WELCOME_BALANCE_EGP })}
               </p>
               <div className="space-y-3">
                 <input

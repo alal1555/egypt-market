@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Search, Compass, Heart, Shield, Crown, LayoutGrid, PlusCircle, User } from "lucide-react";
@@ -10,15 +9,15 @@ import { useTranslation } from "@/i18n/LocaleProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import AdminPendingBadge from "@/components/AdminPendingBadge";
 import { usePendingAdsCount } from "@/hooks/usePendingAdsCount";
+import { useAuthSession } from "@/hooks/useAuthSession";
 
 function NavbarContent() {
-  const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [textInput, setTextInput] = useState(""); 
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
+  const { user, userRole, loggingOut, logout } = useAuthSession();
   const isAdmin = userRole === "admin" || userRole === "super";
   const pendingAdsCount = usePendingAdsCount(isAdmin);
 
@@ -27,38 +26,11 @@ function NavbarContent() {
     setTextInput(searchParams.get("q") || "");
   }, [searchParams]);
 
-  useEffect(() => {
-    const fetchUserRoleFromTable = async (userId: string) => {
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (!error && profile) {
-        setUserRole(profile.role);
-      }
-    };
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchUserRoleFromTable(currentUser.id);
-      } else {
-        setUserRole(null);
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUserRole(null);
+    if (loggingOut) return;
+    await logout();
     router.push("/");
+    router.refresh();
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -154,8 +126,9 @@ function NavbarContent() {
               </Link>
               
               <button 
-                onClick={handleLogout} 
-                className="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors border border-gray-100 px-2.5 py-1.5 rounded-xl"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors border border-gray-100 px-2.5 py-1.5 rounded-xl disabled:opacity-60"
               >
                 {t("nav.logout")}
               </button>
@@ -186,7 +159,8 @@ function NavbarContent() {
               </Link>
               <button 
                 onClick={handleLogout}
-                className="text-xs font-bold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-xl bg-white hover:text-red-500 transition-colors"
+                disabled={loggingOut}
+                className="text-xs font-bold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-xl bg-white hover:text-red-500 transition-colors disabled:opacity-60"
               >
                 {t("nav.logout")}
               </button>

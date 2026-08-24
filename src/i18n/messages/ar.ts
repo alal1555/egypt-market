@@ -62,6 +62,8 @@ export const ar = {
     loginLink: "سجّل الدخول",
     forgotPassword: "نسيت كلمة المرور؟",
     accountCreated: "تم إنشاء الحساب بنجاح!",
+    accountCreatedCheckEmail:
+      "تم إنشاء الحساب مع 3 إعلانات مجانية! تحقق من بريدك لفتح المزادات المجانية.",
     processing: "جاري المعالجة...",
     toggleToLogin: "لديك حساب بالفعل؟ سجّل الدخول",
     toggleToSignup: "ليس لديك حساب؟ سجّل الآن",
@@ -130,6 +132,12 @@ export const ar = {
     specifications: "المواصفات",
     callSeller: "اتصل بالبائع",
     whatsapp: "واتساب",
+    contactToNegotiate: "تواصل مع البائع للتفاوض",
+    whatsappNegotiate: "واتساب للتفاوض",
+    negotiateHint:
+      "انتهى هذا المزاد دون بيع. تواصل مع البائع للاتفاق على سعر — ليس بالضرورة مبلغ المزايدة الأخيرة.",
+    soldInquireHint:
+      "يوجد فائز لهذا المزاد. يمكنك التواصل مع البائع للاستفسار — قد يكون العنصر متاحاً إذا لم تتم الصفقة.",
     noPhone: "رقم التواصل غير متاح لهذا الإعلان.",
     relatedItems: "إعلانات مشابهة",
   },
@@ -150,15 +158,23 @@ export const ar = {
     memberSince: "عضو منذ {date}",
     walletTitle: "رصيد الإعلانات والمحفظة",
     freeAds: "إعلانات مجانية",
-    starterPack: "باقة البداية للمستخدمين الجدد",
+    freeAuctions: "مزادات مجانية",
+    starterPack: "3 إعلانات مجانية عند التسجيل",
     walletBalance: "رصيد المحفظة",
+    walletAdsHint: "~{count} إعلانات · {price} ج.م لكل إعلان",
     paidAdsLeft: "إعلانات مدفوعة متبقية",
     perAd: "{price} ج.م لكل إعلان",
     unlockBalance: "تحقق من الهاتف لفتح {amount} ج.م",
     perAdAfterFree: "{price} ج.م لكل إعلان بعد استخدام المجانية",
     unlockTitle: "افتح رصيد {amount} ج.م في المحفظة",
     unlockDesc:
-      "لديك {freeAds} إعلانات مجانية للبدء. تحقق من رقمك المصري أدناه لإضافة {amount} ج.م (صالحة 90 يوماً).",
+      "لديك {signupFreeAds} إعلانات مجانية للبدء. تحقق من بريدك لفتح {bonusFreeAuctions} مزادات مجانية.",
+    emailVerifyTitle: "تحقق من بريدك الإلكتروني",
+    emailUnlockDesc: "أكّد بريدك لفتح {bonusFreeAuctions} مزادات مجانية.",
+    phoneUnlockDesc: "تحقق من رقمك المصري أدناه لإضافة {amount} ج.م إلى محفظتك (صالحة 90 يوماً).",
+    resendEmail: "إعادة إرسال رسالة التأكيد",
+    emailResent: "تم إرسال رسالة التأكيد — راجع بريدك.",
+    emailResendFailed: "تعذّر إعادة إرسال رسالة التأكيد.",
     otpWillSend: "سيتم إرسال رمز التحقق إلى:",
     smsWillSend: "سيتم إرسال SMS إلى:",
     invalidPhone: "أدخل رقم موبايل مصري صحيح (مثل 01012345678).",
@@ -183,7 +199,7 @@ export const ar = {
     verifying: "جاري التحقق…",
     sendCodeFailed: "تعذّر إرسال رمز التحقق.",
     akedlyNotConfigured: "التحقق من الهاتف غير مُعدّ بعد. أضف AKEDLY_API_KEY و AKEDLY_PIPELINE_ID.",
-    phoneVerified: "تم التحقق! أُضيف {amount} ج.م إلى محفظتك.",
+    phoneVerified: "تم التحقق من الهاتف! أُضيف {amount} ج.م إلى محفظتك.",
     balanceValidUntil: "الرصيد صالح حتى {date}",
     expired: "(منتهي)",
     topUpSoon: "شحن الرصيد قريباً — تواصل مع الدعم للإضافة اليدوية.",
@@ -199,15 +215,18 @@ export const ar = {
   postAd: {
     title: "أضف إعلانك",
     pricingHint:
-      "الإعلان: {price} ج.م · {freeAds} إعلانات مجانية للجدد · تحقق من الهاتف لـ {welcomeBalance} ج.م ·",
+      "الإعلان: {price} ج.م · {signupFreeAds} إعلانات مجانية عند التسجيل · تحقق من البريد لـ {bonusFreeAuctions} مزادات · الهاتف لـ {welcomeBalance} ج.م ·",
     fullPriceList: "قائمة الأسعار",
     checkingCredits: "جاري التحقق من رصيدك...",
     cannotPost: "لا يمكن النشر بعد",
     verifyPhoneLink: "تحقق من الهاتف لفتح رصيد المحفظة ←",
+    verifyEmailLink: "تحقق من البريد لفتح المكافآت ←",
     adminFree: "حساب مدير — النشر مجاني.",
     useFreeAd: "سيستخدم هذا الإعلان 1 مجاني ({remaining} متبقية).",
+    useFreeAuction: "سيستخدم هذا المزاد 1 مزاد مجاني ({remaining} متبقية).",
     balanceLeft: " الرصيد: {balance} ج.م.",
     costsFromBalance: "تكلفة هذا الإعلان {price} ج.م من رصيدك ({balance} ج.م متبقية).",
+    auctionCostsFromBalance: "تكلفة هذا المزاد {price} ج.م من رصيدك ({balance} ج.م متبقية).",
     mainCategory: "القسم الرئيسي",
     selectMain: "اختر القسم الرئيسي",
     subCategory: "القسم الفرعي",
@@ -240,7 +259,8 @@ export const ar = {
     reserveHint: "إذا لم تصل المزايدات لهذا المبلغ، ينتهي المزاد بدون بيع.",
     durationLabel: "مدة المزاد",
     durationHours: "{hours} ساعة",
-    auctionFree: "إعلانات المزاد مجانية حالياً — لن تُخصم إعلانات مجانية أو رصيد المحفظة.",
+    auctionFree:
+      "المزادات تتاح بعد التحقق من البريد. المزادات المدفوعة تحتاج رصيد محفظة بعد نفاد المزادات المجانية.",
   },
   auction: {
     badge: "مزاد",
@@ -255,7 +275,12 @@ export const ar = {
     statusEnded: "انتهى المزاد",
     statusNoSale: "انتهى — لم يتحقق السعر الاحتياطي أو لا مزايدات",
     statusPending: "بانتظار الموافقة",
-    winningBid: "المزايدة الفائزة: {amount} ج.م — تواصل مع الفائز أدناه لإتمام البيع.",
+    winningBidSeller:
+      "المزايدة الفائزة: {amount} ج.م — تواصل مع الفائز أدناه لإتمام البيع.",
+    winningBidPublic:
+      "انتهى هذا المزاد بمزايدة فائزة بقيمة {amount} ج.م. يتم إتمام البيع بين البائع والفائز.",
+    winningBidLost:
+      "انتهى المزاد. المزايدة الفائزة: {amount} ج.م — فاز بها مزايد آخر.",
     noSale: "انتهى هذا المزاد دون بيع فائز.",
     winnerTitle: "فائز المزاد",
     winnerName: "الفائز: {name}",
@@ -283,7 +308,7 @@ export const ar = {
     sellerWatching: "مزادك نشط. أعلى مزايدة تفوز عند انتهاء الوقت.",
     recentBids: "آخر المزايدات",
     disclaimer:
-      "المزايدات عروض جادة. يادي يربط البائع والمشتري — الدفع والتسليم مباشرة بينكم.",
+      "المزايدات عروض جادة. يدي يربط البائع والمشتري — الدفع والتسليم مباشرة بينكم.",
     errors: {
       not_authenticated: "سجّل الدخول للمزايدة.",
       phone_not_verified: "تحقق من هاتفك في الحساب للمزايدة.",
@@ -300,8 +325,10 @@ export const ar = {
       wallet_migration_required:
         "المحفظة غير مفعّلة في Supabase. نفّذ supabase/wallet.sql في SQL Editor ثم حدّث الصفحة.",
       phone_not_verified:
-        "استخدمت الإعلانات المجانية الثلاثة. تحقق من هاتفك في الحساب لفتح 200 ج.م.",
-      insufficient_credits: "تحتاج {price} ج.م أو إعلاناً مجانياً. شحن الرصيد قريباً.",
+        "تحقق من هاتفك في الحساب لفتح رصيد المحفظة.",
+      email_not_verified:
+        "تحقق من بريدك لفتح الإعلانات المجانية الإضافية والمزادات المجانية.",
+      insufficient_credits: "تحتاج {price} ج.م أو رصيداً مجانياً للنشر. شحن الرصيد قريباً.",
       balance_expired: "انتهت صلاحية رصيد الترحيب. شحن الرصيد قريباً.",
       ad_expiry_migration_required:
         "انتهاء الإعلان غير مفعّل. نفّذ supabase/ad-expiry.sql في SQL Editor.",
@@ -324,6 +351,8 @@ export const ar = {
     renewed: "تم التجديد — نشط حتى {date}.",
     expiredOn: "انتهى في {date}",
     liveUntil: "نشط حتى {date}",
+    auctionEndsAt: "ينتهي المزاد {date}",
+    visibleUntil: "ظاهر حتى {date}",
     renewing: "جاري التجديد…",
     renew: "تجديد ({price} ج.م)",
     edit: "تعديل",
@@ -407,6 +436,8 @@ export const ar = {
   },
   authCallback: {
     redirecting: "جاري التحويل...",
+    invalidLink: "هذا الرابط غير صالح أو منتهي.",
+    backToLogin: "العودة لتسجيل الدخول",
   },
   shareAd: {
     button: "مشاركة",

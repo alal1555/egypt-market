@@ -33,7 +33,7 @@ create policy "ads_select_active"
 alter table public.wallet_transactions drop constraint if exists wallet_transactions_type_check;
 alter table public.wallet_transactions add constraint wallet_transactions_type_check
   check (
-    type in ('welcome_grant', 'free_ad', 'ad_post', 'ad_renewal', 'admin_credit', 'top_up', 'refund')
+    type in ('welcome_grant', 'free_ad', 'free_auction', 'ad_post', 'ad_renewal', 'admin_credit', 'top_up', 'refund')
   );
 
 -- ---------------------------------------------------------------------------

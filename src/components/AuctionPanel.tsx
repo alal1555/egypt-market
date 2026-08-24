@@ -52,6 +52,7 @@ export default function AuctionPanel({ ad, onAdUpdate }: Props) {
   const isSeller = userId === ad.user_id;
   const isWinner = Boolean(userId && ad.auction_winner_id && userId === ad.auction_winner_id);
   const auctionWon = isAuctionWon(ad);
+  const userPlacedBid = Boolean(userId && bids.some((bid) => bid.user_id === userId));
 
   const refreshAuctionState = useCallback(async () => {
     await restCloseExpiredAuctions();
@@ -259,12 +260,24 @@ export default function AuctionPanel({ ad, onAdUpdate }: Props) {
 
       <p className="text-sm font-semibold text-gray-700">{statusLabel}</p>
 
-      {auctionWon && ad.auction_current_bid != null && (
-        <p className="text-sm text-emerald-700 font-medium bg-emerald-50 rounded-xl p-3">
-          {t("auction.winningBid", {
-            amount: Number(ad.auction_current_bid).toLocaleString(),
-          })}
-        </p>
+      {auctionWon && ad.auction_current_bid != null && !isWinner && (
+        isSeller ? (
+          <p className="text-sm text-emerald-700 font-medium bg-emerald-50 rounded-xl p-3">
+            {t("auction.winningBidSeller", {
+              amount: Number(ad.auction_current_bid).toLocaleString(),
+            })}
+          </p>
+        ) : (
+          <p className="text-sm text-gray-700 font-medium bg-gray-50 rounded-xl p-3">
+            {userPlacedBid
+              ? t("auction.winningBidLost", {
+                  amount: Number(ad.auction_current_bid).toLocaleString(),
+                })
+              : t("auction.winningBidPublic", {
+                  amount: Number(ad.auction_current_bid).toLocaleString(),
+                })}
+          </p>
+        )
       )}
 
       {auctionWon && isWinner && !isSeller && (

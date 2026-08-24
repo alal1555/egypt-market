@@ -5,27 +5,43 @@ import {
   AD_LIVE_DAYS,
   AD_POST_PRICE_EGP,
   BALANCE_EXPIRY_DAYS,
+  SIGNUP_FREE_ADS,
+  EMAIL_VERIFY_BONUS_FREE_ADS,
+  EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
   WELCOME_BALANCE_EGP,
   WELCOME_FREE_ADS,
 } from "@/constants/adPricing";
 
-export { AD_LIVE_DAYS, AD_POST_PRICE_EGP, BALANCE_EXPIRY_DAYS, WELCOME_BALANCE_EGP, WELCOME_FREE_ADS };
+export {
+  AD_LIVE_DAYS,
+  AD_POST_PRICE_EGP,
+  BALANCE_EXPIRY_DAYS,
+  SIGNUP_FREE_ADS,
+  EMAIL_VERIFY_BONUS_FREE_ADS,
+  EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
+  WELCOME_BALANCE_EGP,
+  WELCOME_FREE_ADS,
+};
 
 export type WalletProfile = {
   free_ads_remaining: number;
+  free_auctions_remaining: number;
   balance: number;
   balance_expires_at: string | null;
   phone_verified: boolean;
+  email_verification_bonus_granted: boolean;
   welcome_credits_granted: boolean;
 };
 
 export type CanPostResult = {
   ok: boolean;
   error?: string;
-  type?: "free_ad" | "balance" | "admin_waiver";
+  type?: "free_ad" | "free_auction" | "balance" | "admin_waiver";
   free_ads_remaining?: number;
+  free_auctions_remaining?: number;
   balance?: number;
   ad_price?: number;
+  phone_verified?: boolean;
 };
 
 export type ConsumeResult = {
@@ -33,6 +49,7 @@ export type ConsumeResult = {
   error?: string;
   type?: string;
   free_ads_remaining?: number;
+  free_auctions_remaining?: number;
   balance?: number;
   charged?: number;
 };
@@ -51,9 +68,11 @@ export function formatWalletError(code: string | undefined): string {
     case "wallet_migration_required":
       return "Wallet is not set up in Supabase yet. Run supabase/wallet.sql in the SQL Editor (see supabase/README.md), then refresh this page.";
     case "phone_not_verified":
-      return "You've used your 3 free ads. Verify your phone on Profile to unlock 200 EGP wallet balance.";
+      return "Verify your phone on Profile to unlock wallet balance.";
+    case "email_not_verified":
+      return "Verify your email to unlock free auction listings.";
     case "insufficient_credits":
-      return `You need ${AD_POST_PRICE_EGP} EGP balance or a free ad to post. Top-up coming soon.`;
+      return `You need ${AD_POST_PRICE_EGP} EGP balance or a free credit to post. Top-up coming soon.`;
     case "balance_expired":
       return "Your welcome balance has expired. Top-up coming soon.";
     case "ad_expiry_migration_required":
@@ -87,6 +106,7 @@ function isWalletRpcMissing(message: string): boolean {
     message.includes("Could not find the function") ||
     message.includes("schema cache") ||
     message.includes("function public.can_post_ad") ||
+    message.includes("function public.can_post_auction") ||
     message.includes("function public.consume_ad_credit")
   );
 }
@@ -136,8 +156,87 @@ export function canPostFromProfile(
   };
 }
 
+export function canPostAuctionFromProfile(
+  profile: ProfileRow,
+  price: number = AD_POST_PRICE_EGP
+): CanPostResult {
+  if (profile.role === "admin" || profile.role === "super") {
+    return { ok: true, type: "admin_waiver" };
+  }
+  if (profile.free_auctions_remaining > 0) {
+    return {
+      ok: true,
+      type: "free_auction",
+      free_auctions_remaining: profile.free_auctions_remaining,
+      balance: Number(profile.balance),
+      phone_verified: profile.phone_verified,
+    };
+  }
+  if (!profile.email_verification_bonus_granted) {
+    return { ok: false, error: "email_not_verified", free_auctions_remaining: 0 };
+  }
+  if (!profile.phone_verified) {
+    return { ok: false, error: "phone_not_verified", free_auctions_remaining: 0 };
+  }
+  const balanceOk =
+    profile.balance_expires_at &&
+    !isBalanceExpired(profile.balance_expires_at) &&
+    Number(profile.balance) >= price;
+  if (balanceOk) {
+    return {
+      ok: true,
+      type: "balance",
+      free_auctions_remaining: 0,
+      balance: Number(profile.balance),
+      ad_price: price,
+    };
+  }
+  if (profile.balance_expires_at && isBalanceExpired(profile.balance_expires_at)) {
+    return { ok: false, error: "balance_expired", balance: Number(profile.balance) };
+  }
+  return {
+    ok: false,
+    error: "insufficient_credits",
+    free_auctions_remaining: profile.free_auctions_remaining,
+    balance: Number(profile.balance),
+  };
+}
+
 const WALLET_PROFILE_SELECT =
-  "role, free_ads_remaining, balance, balance_expires_at, phone_verified, welcome_credits_granted";
+  "role, free_ads_remaining, free_auctions_remaining, balance, balance_expires_at, phone_verified, email_verification_bonus_granted, welcome_credits_granted";
+
+export type EmailBonusResult = {
+  ok?: boolean;
+  error?: string;
+  already_granted?: boolean;
+  free_ads_remaining?: number;
+  free_auctions_remaining?: number;
+};
+
+export async function grantEmailVerificationBonus(accessToken: string): Promise<EmailBonusResult> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/grant_email_verification_bonus`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: supabaseAnonKey,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  const body = (await res.json().catch(() => ({}))) as EmailBonusResult;
+  if (!res.ok) {
+    throw new Error(typeof body.error === "string" ? body.error : "email_bonus_failed");
+  }
+  if (body.ok === false && body.error) {
+    return body;
+  }
+  return body;
+}
 
 export async function checkCanPostAd(
   client: SupabaseClient,
@@ -171,6 +270,40 @@ export async function checkCanPostAd(
   }
 
   return canPostFromProfile(profile as ProfileRow);
+}
+
+export async function checkCanPostAuction(
+  client: SupabaseClient,
+  userId: string
+): Promise<CanPostResult> {
+  const { data, error } = await client.rpc("can_post_auction", { p_price: AD_POST_PRICE_EGP });
+
+  if (!error && data) {
+    return data as CanPostResult;
+  }
+
+  if (error && !isWalletRpcMissing(error.message)) {
+    return { ok: false, error: error.message };
+  }
+
+  const { data: profile, error: profileError } = await client
+    .from("profiles")
+    .select(WALLET_PROFILE_SELECT)
+    .eq("id", userId)
+    .single();
+
+  if (profileError) {
+    if (
+      profileError.message.includes("column") ||
+      profileError.code === "42703" ||
+      profileError.message.includes("does not exist")
+    ) {
+      return { ok: false, error: "wallet_migration_required" };
+    }
+    return { ok: false, error: profileError.message };
+  }
+
+  return canPostAuctionFromProfile(profile as ProfileRow);
 }
 
 export type RenewResult = {

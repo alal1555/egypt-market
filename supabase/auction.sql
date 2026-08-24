@@ -90,6 +90,7 @@ create policy "auction_bids_select_public"
 
 -- ---------------------------------------------------------------------------
 -- Public ad visibility: fixed listings unchanged; live + recently ended auctions
+-- Ended auctions stay public for 7 days (sold) or 14 days (no_sale) via expires_at.
 -- ---------------------------------------------------------------------------
 drop policy if exists "ads_select_active" on public.ads;
 create policy "ads_select_active"
@@ -111,6 +112,7 @@ create policy "ads_select_active"
       or (
         listing_type = 'auction'
         and auction_status in ('ended', 'no_sale', 'sold')
+        and (expires_at is null or expires_at > now())
       )
     )
   );
@@ -213,11 +215,14 @@ begin
         auction_verification_code = coalesce(
           v_ad.auction_verification_code,
           public.generate_auction_verification_code()
-        )
+        ),
+        expires_at = now() + interval '7 days'
       where id = v_ad.id;
     else
       update public.ads
-      set auction_status = 'no_sale'
+      set
+        auction_status = 'no_sale',
+        expires_at = now() + interval '14 days'
       where id = v_ad.id;
     end if;
 
@@ -432,93 +437,29 @@ $$;
 grant execute on function public.get_auction_winner_verification(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
--- Auction listings post for free (skip wallet charge)
--- Re-run after wallet.sql if consume_ad_credit was already deployed without this.
+-- Listing credits — keep in sync with wallet.sql (free auctions + paid fallback)
 -- ---------------------------------------------------------------------------
-create or replace function public.consume_ad_credit(
-  p_ad_id uuid default null,
-  p_price numeric default 40
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_uid uuid := auth.uid();
-  v_profile public.profiles%rowtype;
-  v_balance_ok boolean;
-begin
-  if v_uid is null then
-    return jsonb_build_object('ok', false, 'error', 'not_authenticated');
-  end if;
+-- Re-run wallet.sql for the latest consume_ad_credit / can_post_auction definitions.
 
-  select * into v_profile from public.profiles where id = v_uid for update;
+-- ---------------------------------------------------------------------------
+-- Backfill post-auction visibility for listings closed before expires_at was set
+-- ---------------------------------------------------------------------------
+update public.ads
+set expires_at = coalesce(auction_ends_at, now()) + interval '7 days'
+where listing_type = 'auction'
+  and auction_status in ('ended', 'sold')
+  and (
+    expires_at is null
+    or expires_at <= coalesce(auction_ends_at, expires_at)
+  );
 
-  if not found then
-    return jsonb_build_object('ok', false, 'error', 'profile_not_found');
-  end if;
-
-  if public.is_admin() then
-    return jsonb_build_object('ok', true, 'type', 'admin_waiver');
-  end if;
-
-  if p_ad_id is not null then
-    if exists (
-      select 1 from public.ads
-      where id = p_ad_id
-        and user_id = v_uid
-        and listing_type = 'auction'
-    ) then
-      return jsonb_build_object('ok', true, 'type', 'auction_waiver');
-    end if;
-  end if;
-
-  if v_profile.free_ads_remaining > 0 then
-    update public.profiles
-    set free_ads_remaining = free_ads_remaining - 1
-    where id = v_uid;
-
-    insert into public.wallet_transactions (user_id, amount, type, ad_id, description)
-    values (v_uid, 0, 'free_ad', p_ad_id, 'Used 1 free ad credit');
-
-    return jsonb_build_object(
-      'ok', true,
-      'type', 'free_ad',
-      'free_ads_remaining', v_profile.free_ads_remaining - 1
-    );
-  end if;
-
-  if not v_profile.phone_verified then
-    return jsonb_build_object('ok', false, 'error', 'phone_not_verified');
-  end if;
-
-  v_balance_ok := v_profile.balance_expires_at is not null
-    and v_profile.balance_expires_at >= now()
-    and v_profile.balance >= p_price;
-
-  if v_balance_ok then
-    update public.profiles
-    set balance = balance - p_price
-    where id = v_uid;
-
-    insert into public.wallet_transactions (user_id, amount, type, ad_id, description)
-    values (v_uid, -p_price, 'ad_post', p_ad_id, 'Standard ad posting fee');
-
-    return jsonb_build_object(
-      'ok', true,
-      'type', 'balance',
-      'balance', v_profile.balance - p_price,
-      'charged', p_price
-    );
-  end if;
-
-  if v_profile.balance_expires_at is not null and v_profile.balance_expires_at < now() then
-    return jsonb_build_object('ok', false, 'error', 'balance_expired');
-  end if;
-
-  return jsonb_build_object('ok', false, 'error', 'insufficient_credits');
-end;
-$$;
+update public.ads
+set expires_at = coalesce(auction_ends_at, now()) + interval '14 days'
+where listing_type = 'auction'
+  and auction_status = 'no_sale'
+  and (
+    expires_at is null
+    or expires_at <= coalesce(auction_ends_at, expires_at)
+  );
 
 notify pgrst, 'reload schema';

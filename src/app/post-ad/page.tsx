@@ -9,13 +9,15 @@ import { CATEGORY_CONFIG, getCategoryGroups } from "@/constants/categoryConfig";
 import {
   AD_POST_PRICE_EGP,
   CanPostResult,
+  EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
+  SIGNUP_FREE_ADS,
   WELCOME_BALANCE_EGP,
-  WELCOME_FREE_ADS,
 } from "@/lib/wallet";
 import { cleanAdAttributes } from "@/lib/utils";
 import { readStoredAccessToken } from "@/lib/auth-client";
 import {
   restCanPostAd,
+  restCanPostAuction,
   restConsumeAdCredit,
   restCreateAd,
   restDeleteAd,
@@ -90,10 +92,13 @@ export default function PostAdPage() {
       }
     }
 
-    const refreshPostCheck = async (accessToken: string) => {
+    const refreshPostCheck = async (accessToken: string, type: ListingType = listingType) => {
       setCheckingCredits(true);
       try {
-        const check = await restCanPostAd(accessToken);
+        const check =
+          type === "auction"
+            ? await restCanPostAuction(accessToken)
+            : await restCanPostAd(accessToken);
         if (active) setPostCheck(check);
       } catch {
         if (active) setPostCheck({ ok: false, error: "wallet_migration_required" });
@@ -129,6 +134,27 @@ export default function PostAdPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const token = accessTokenRef.current;
+    if (!token || !userId) return;
+    void refreshPostCheckForType(token, listingType);
+
+    async function refreshPostCheckForType(accessToken: string, type: ListingType) {
+      setCheckingCredits(true);
+      try {
+        const check =
+          type === "auction"
+            ? await restCanPostAuction(accessToken)
+            : await restCanPostAd(accessToken);
+        setPostCheck(check);
+      } catch {
+        setPostCheck({ ok: false, error: "wallet_migration_required" });
+      } finally {
+        setCheckingCredits(false);
+      }
+    }
+  }, [listingType, userId]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setImages([...images, ...Array.from(e.target.files)]);
@@ -144,12 +170,17 @@ export default function PostAdPage() {
       const uid = userId;
       if (!accessToken || !uid) throw new Error(t("postAd.mustLogin"));
 
-      if (listingType !== "auction") {
+      if (listingType === "auction") {
         if (!postCheck?.ok) {
-          const canPost = await restCanPostAd(accessToken);
+          const canPost = await restCanPostAuction(accessToken);
           if (!canPost.ok) {
             throw new Error(formatWalletErrorLocalized(canPost.error, t));
           }
+        }
+      } else if (!postCheck?.ok) {
+        const canPost = await restCanPostAd(accessToken);
+        if (!canPost.ok) {
+          throw new Error(formatWalletErrorLocalized(canPost.error, t));
         }
       }
 
@@ -180,12 +211,10 @@ export default function PostAdPage() {
 
       const ad = await restCreateAd(accessToken, adPayload as Parameters<typeof restCreateAd>[1]);
 
-      if (listingType !== "auction") {
-        const consumed = await restConsumeAdCredit(accessToken, ad.id);
-        if (!consumed.ok) {
-          await restDeleteAd(accessToken, ad.id);
-          throw new Error(formatWalletErrorLocalized(consumed.error, t));
-        }
+      const consumed = await restConsumeAdCredit(accessToken, ad.id);
+      if (!consumed.ok) {
+        await restDeleteAd(accessToken, ad.id);
+        throw new Error(formatWalletErrorLocalized(consumed.error, t));
       }
 
       setUploading(false);
@@ -208,14 +237,6 @@ export default function PostAdPage() {
   };
 
   const renderCreditBanner = () => {
-    if (listingType === "auction") {
-      return (
-        <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
-          {t("postAd.auctionFree")}
-        </div>
-      );
-    }
-
     if (checkingCredits) {
       return (
         <div className="mb-6 p-4 rounded-xl bg-gray-50 border text-sm text-gray-500 text-center">
@@ -233,6 +254,11 @@ export default function PostAdPage() {
               {t("postAd.verifyPhoneLink")}
             </Link>
           )}
+          {postCheck?.error === "email_not_verified" && (
+            <Link href="/profile" className="inline-block mt-2 font-bold text-[#FF6321] underline">
+              {t("postAd.verifyEmailLink")}
+            </Link>
+          )}
         </div>
       );
     }
@@ -240,6 +266,13 @@ export default function PostAdPage() {
       return (
         <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
           {t("postAd.adminFree")}
+        </div>
+      );
+    }
+    if (postCheck.type === "free_auction") {
+      return (
+        <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 text-sm text-gray-700">
+          {t("postAd.useFreeAuction", { remaining: postCheck.free_auctions_remaining ?? 0 })}
         </div>
       );
     }
@@ -255,13 +288,14 @@ export default function PostAdPage() {
     }
     return (
       <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 text-sm text-gray-700">
-        {t("postAd.costsFromBalance", { price: AD_POST_PRICE_EGP, balance: postCheck.balance ?? 0 })}
+        {listingType === "auction"
+          ? t("postAd.auctionCostsFromBalance", { price: AD_POST_PRICE_EGP, balance: postCheck.balance ?? 0 })
+          : t("postAd.costsFromBalance", { price: AD_POST_PRICE_EGP, balance: postCheck.balance ?? 0 })}
       </div>
     );
   };
 
-  const canSubmit =
-    !uploading && !!userId && (listingType === "auction" || Boolean(postCheck?.ok));
+  const canSubmit = !uploading && !!userId && Boolean(postCheck?.ok);
 
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white shadow-xl rounded-2xl my-10 border border-gray-100">
@@ -269,7 +303,8 @@ export default function PostAdPage() {
       <p className="text-center text-sm text-gray-500 mb-6">
         {t("postAd.pricingHint", {
           price: AD_POST_PRICE_EGP,
-          freeAds: WELCOME_FREE_ADS,
+          signupFreeAds: SIGNUP_FREE_ADS,
+          bonusFreeAuctions: EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
           welcomeBalance: WELCOME_BALANCE_EGP,
         })}{" "}
         <Link href="/pricing" className="text-[#FF6321] font-bold hover:underline">

@@ -1,7 +1,17 @@
 /** Ad posting prices — single source of truth for wallet RPCs and the public price list. */
 
 export const AD_POST_PRICE_EGP = 40;
-export const WELCOME_FREE_ADS = 3;
+/** Free fixed-price ads granted on signup (before verification). */
+export const SIGNUP_FREE_ADS = 3;
+/** Extra free fixed-price ads after email verification (0 — all welcome ads are on signup). */
+export const EMAIL_VERIFY_BONUS_FREE_ADS = 0;
+/** Free auction listings granted after email verification. */
+export const EMAIL_VERIFY_BONUS_FREE_AUCTIONS = 5;
+/** @deprecated Use EMAIL_VERIFY_BONUS_* — kept for imports during transition */
+export const VERIFY_BONUS_FREE_ADS = EMAIL_VERIFY_BONUS_FREE_ADS;
+export const VERIFY_BONUS_FREE_AUCTIONS = EMAIL_VERIFY_BONUS_FREE_AUCTIONS;
+/** Max free fixed ads per account (signup + verify bonus). */
+export const WELCOME_FREE_ADS = SIGNUP_FREE_ADS + VERIFY_BONUS_FREE_ADS;
 export const WELCOME_BALANCE_EGP = 200;
 export const BALANCE_EXPIRY_DAYS = 90;
 export const AD_LIVE_DAYS = 30;
@@ -64,8 +74,7 @@ export const AD_PRICING_PLANS: AdPricingPlan[] = [
     subtitle: "Included with every new account",
     badge: "New users",
     features: [
-      `${WELCOME_FREE_ADS} ad postings at no charge`,
-      "All categories and sub-categories",
+      `${SIGNUP_FREE_ADS} free ads on signup`,
       `${AD_LIVE_DAYS} days live after approval`,
     ],
   },
@@ -78,7 +87,7 @@ export const AD_PRICING_PLANS: AdPricingPlan[] = [
     features: [
       `${WELCOME_BALANCE_EGP} EGP added to your wallet`,
       `Balance valid for ${BALANCE_EXPIRY_DAYS} days`,
-      `Covers ~${Math.floor(WELCOME_BALANCE_EGP / AD_POST_PRICE_EGP)} standard ads`,
+      `Covers ~${Math.floor(WELCOME_BALANCE_EGP / AD_POST_PRICE_EGP)} standard ads or auctions`,
     ],
   },
   {
@@ -98,8 +107,9 @@ export const AD_PRICING_PLANS: AdPricingPlan[] = [
 
 export const AD_PRICING_NOTES = [
   "Listings stay live for 30 days after admin approval, then hide from search until renewed.",
-  "Free ads are used first. Wallet balance is charged only after free ads run out.",
-  "Phone verification is required before you can spend wallet balance.",
+  "Free ad credits are for fixed-price listings. Free auction credits are separate.",
+  `All ${WELCOME_FREE_ADS} welcome free ads are granted on signup.`,
+  `Email verification unlocks ${EMAIL_VERIFY_BONUS_FREE_AUCTIONS} free auction listings.`,
   "Renewing an expired ad costs the same as a new standard ad (40 EGP or 1 free ad).",
   "Wallet top-up coming soon — contact support for manual credits in the meantime.",
   "Admin accounts post for free.",

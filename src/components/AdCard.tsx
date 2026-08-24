@@ -126,15 +126,20 @@ export default function AdCard({
           <Heart size={18} className={`transition-colors duration-200 ${isFavorited ? "fill-red-500 text-red-500" : "text-gray-600 hover:text-red-500"}`} />
         </button>
 
-        {displayStatus && statusConfig[displayStatus] && (
-           <div className={`absolute top-3 left-3 z-10 px-2 py-1 rounded text-[10px] font-bold text-white flex items-center gap-1 ${statusConfig[displayStatus].color}`}>
-              {statusConfig[displayStatus].icon} {statusConfig[displayStatus].label}
-           </div>
-        )}
-
-        {auction && !displayStatus && (
-          <div className="absolute top-3 left-3 z-10 px-2 py-1 rounded text-[10px] font-bold text-white bg-[#FF6321] flex items-center gap-1">
-            <Gavel size={11} /> {t("auction.cardBadge")}
+        {(displayStatus || auction) && (
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 items-start">
+            {displayStatus && statusConfig[displayStatus] && (
+              <div
+                className={`px-2 py-1 rounded text-[10px] font-bold text-white flex items-center gap-1 ${statusConfig[displayStatus].color}`}
+              >
+                {statusConfig[displayStatus].icon} {statusConfig[displayStatus].label}
+              </div>
+            )}
+            {auction && (
+              <div className="px-2 py-1 rounded text-[10px] font-bold text-white bg-[#FF6321] flex items-center gap-1">
+                <Gavel size={11} /> {t("auction.cardBadge")}
+              </div>
+            )}
           </div>
         )}
 

@@ -5,6 +5,7 @@ type TranslateFn = (key: string, vars?: Record<string, string | number>) => stri
 
 const WALLET_ERROR_KEYS = [
   "wallet_migration_required",
+  "email_not_verified",
   "phone_not_verified",
   "insufficient_credits",
   "balance_expired",

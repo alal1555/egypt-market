@@ -13,10 +13,14 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   role text not null default 'user' check (role in ('user', 'admin', 'super')),
   free_ads_remaining integer not null default 0,
+  free_auctions_remaining integer not null default 0,
   balance numeric not null default 0 check (balance >= 0),
   balance_expires_at timestamptz,
   phone_verified boolean not null default false,
+  email_verification_bonus_granted boolean not null default false,
   welcome_credits_granted boolean not null default false,
+  email text,
+  full_name text,
   created_at timestamptz not null default now()
 );
 
@@ -88,8 +92,14 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, role, free_ads_remaining)
-  values (new.id, 'user', 3)
+  insert into public.profiles (id, role, free_ads_remaining, email, full_name)
+  values (
+    new.id,
+    'user',
+    3,
+    new.email,
+    nullif(trim(coalesce(new.raw_user_meta_data->>'full_name', '')), '')
+  )
   on conflict (id) do nothing;
   return new;
 end;

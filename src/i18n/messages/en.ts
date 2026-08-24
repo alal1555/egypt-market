@@ -62,6 +62,8 @@ export const en = {
     loginLink: "Log in",
     forgotPassword: "Forgot password?",
     accountCreated: "Account created successfully!",
+    accountCreatedCheckEmail:
+      "Account created with 3 free ads! Check your email to unlock free auctions.",
     processing: "Processing...",
     toggleToLogin: "Already have an account? Login",
     toggleToSignup: "Don't have an account? Sign Up",
@@ -130,6 +132,12 @@ export const en = {
     specifications: "Specifications",
     callSeller: "Call Seller",
     whatsapp: "WhatsApp",
+    contactToNegotiate: "Contact seller to negotiate",
+    whatsappNegotiate: "WhatsApp to negotiate",
+    negotiateHint:
+      "This auction ended without a sale. Contact the seller to agree on a price — it is not the winning bid amount.",
+    soldInquireHint:
+      "This auction has a winning bidder. You can still contact the seller to inquire — the item may be available if the sale does not go through.",
     noPhone: "Contact phone not available for this listing.",
     relatedItems: "Related Items",
   },
@@ -150,15 +158,24 @@ export const en = {
     memberSince: "Member since {date}",
     walletTitle: "Ad Credits & Balance",
     freeAds: "Free ads",
-    starterPack: "Starter pack for new users",
+    freeAuctions: "Free auctions",
+    starterPack: "3 free ads on signup",
     walletBalance: "Wallet balance",
+    walletAdsHint: "~{count} ads at {price} EGP each",
     paidAdsLeft: "Paid ads left",
     perAd: "{price} EGP per ad",
     unlockBalance: "Verify phone to unlock {amount} EGP",
     perAdAfterFree: "{price} EGP per ad after free ads are used",
     unlockTitle: "Unlock {amount} EGP wallet balance",
     unlockDesc:
-      "You already have {freeAds} free ads to get started. Verify your Egyptian mobile below to add {amount} EGP to your wallet (valid 90 days).",
+      "You have {signupFreeAds} free ads to get started. Verify your email to unlock {bonusFreeAuctions} free auctions.",
+    emailVerifyTitle: "Verify your email",
+    emailUnlockDesc:
+      "Confirm your email to unlock {bonusFreeAuctions} free auction listings.",
+    phoneUnlockDesc: "Verify your Egyptian mobile below to add {amount} EGP to your wallet (valid 90 days).",
+    resendEmail: "Resend confirmation email",
+    emailResent: "Confirmation email sent — check your inbox.",
+    emailResendFailed: "Could not resend confirmation email.",
     otpWillSend: "Verification code will be sent to:",
     smsWillSend: "SMS will be sent to:",
     invalidPhone: "Enter a valid Egyptian mobile (e.g. 01012345678).",
@@ -199,15 +216,18 @@ export const en = {
   postAd: {
     title: "Post Your Ad",
     pricingHint:
-      "Standard ad: {price} EGP · New users get {freeAds} free ads · Verify phone for {welcomeBalance} EGP wallet balance ·",
+      "Standard ad: {price} EGP · {signupFreeAds} free ads on signup · Verify email for {bonusFreeAuctions} free auctions · Phone verify for {welcomeBalance} EGP ·",
     fullPriceList: "Full price list",
     checkingCredits: "Checking your ad credits…",
     cannotPost: "Cannot post yet",
     verifyPhoneLink: "Verify phone to unlock wallet balance →",
+    verifyEmailLink: "Verify email to unlock bonus credits →",
     adminFree: "Admin account — posting is free.",
     useFreeAd: "This ad will use 1 free ad ({remaining} free remaining).",
+    useFreeAuction: "This auction will use 1 free auction ({remaining} free remaining).",
     balanceLeft: " Balance: {balance} EGP.",
     costsFromBalance: "This ad costs {price} EGP from your balance ({balance} EGP left).",
+    auctionCostsFromBalance: "This auction costs {price} EGP from your balance ({balance} EGP left).",
     mainCategory: "Main Category",
     selectMain: "Select Main Category",
     subCategory: "Sub-category",
@@ -232,7 +252,7 @@ export const en = {
     publishTimeout: "Posting timed out. Please try again.",
     listingTypeLabel: "Listing type",
     fixedPriceOption: "Fixed price",
-    auctionOption: "Auction (مزاد)",
+    auctionOption: "Auction",
     auctionHint: "Buyers bid during the timer. Highest bid wins when time runs out.",
     startingPricePlaceholder: "Starting bid (EGP)",
     bidIncrementLabel: "Minimum bid increase (EGP)",
@@ -240,11 +260,12 @@ export const en = {
     reserveHint: "If bids stay below this amount, the auction ends with no sale.",
     durationLabel: "Auction duration",
     durationHours: "{hours} hours",
-    auctionFree: "Auction listings are free for now — no free ads or wallet balance will be used.",
+    auctionFree:
+      "Auctions unlock after email verification. Paid auctions need phone-verified wallet balance after free credits run out.",
   },
   auction: {
     badge: "Auction",
-    cardBadge: "مزاد",
+    cardBadge: "Auction",
     startingAt: "From {price}",
     currentBid: "Current bid",
     startingPrice: "Starting bid",
@@ -255,7 +276,12 @@ export const en = {
     statusEnded: "Auction ended",
     statusNoSale: "Ended — reserve not met or no bids",
     statusPending: "Awaiting approval",
-    winningBid: "Winning bid: {amount} EGP — contact the winner below to complete the sale.",
+    winningBidSeller:
+      "Winning bid: {amount} EGP — contact the winner below to complete the sale.",
+    winningBidPublic:
+      "This auction ended with a winning bid of {amount} EGP. The sale is being completed between the seller and the winning bidder.",
+    winningBidLost:
+      "Auction ended. Winning bid: {amount} EGP — another bidder won this item.",
     noSale: "This auction ended without a winning sale.",
     winnerTitle: "Auction winner",
     winnerName: "Winner: {name}",
@@ -300,8 +326,10 @@ export const en = {
       wallet_migration_required:
         "Wallet is not set up in Supabase yet. Run supabase/wallet.sql in the SQL Editor (see supabase/README.md), then refresh this page.",
       phone_not_verified:
-        "You've used your 3 free ads. Verify your phone on Profile to unlock 200 EGP wallet balance.",
-      insufficient_credits: "You need {price} EGP balance or a free ad to post. Top-up coming soon.",
+        "Verify your phone on Profile to unlock wallet balance.",
+      email_not_verified:
+        "Verify your email to unlock bonus free ads and free auction listings.",
+      insufficient_credits: "You need {price} EGP balance or a free credit to post. Top-up coming soon.",
       balance_expired: "Your welcome balance has expired. Top-up coming soon.",
       ad_expiry_migration_required:
         "Ad expiry is not set up in Supabase yet. Run supabase/ad-expiry.sql in the SQL Editor.",
@@ -324,6 +352,8 @@ export const en = {
     renewed: "Listing renewed — live until {date}.",
     expiredOn: "Expired on {date}",
     liveUntil: "Live until {date}",
+    auctionEndsAt: "Auction ends {date}",
+    visibleUntil: "Visible until {date}",
     renewing: "Renewing…",
     renew: "Renew ({price} EGP)",
     edit: "Edit",
@@ -407,6 +437,8 @@ export const en = {
   },
   authCallback: {
     redirecting: "Redirecting...",
+    invalidLink: "This link is invalid or expired.",
+    backToLogin: "Back to login",
   },
   shareAd: {
     button: "Share",

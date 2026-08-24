@@ -16,7 +16,7 @@ import {
 } from "@/constants/adPricing";
 import { renewAdListing } from "@/lib/wallet";
 import { useTranslation } from "@/i18n/LocaleProvider";
-import { getDisplayPrice, isAuctionListing, type AuctionAdFields } from "@/constants/auction";
+import { getDisplayPrice, isAuctionFinished, isAuctionListing, isAuctionLive, type AuctionAdFields } from "@/constants/auction";
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
 import ShareAdMenu from "@/components/ShareAdMenu";
 
@@ -187,12 +187,16 @@ export default function MyAdsPage() {
                 modelName={ad.attributes?.model_id ? modelsMap[ad.attributes.model_id] : undefined}
               />
 
-              {ad.status === "active" && ad.expires_at && !auction && (
+              {ad.status === "active" && ad.expires_at && (
                 <p className={`text-xs mt-3 flex items-center gap-1 ${expired ? "text-red-600 font-bold" : "text-gray-500"}`}>
                   <CalendarClock size={14} />
                   {expired
                     ? t("myAds.expiredOn", { date: expiryLabel ?? "—" })
-                    : t("myAds.liveUntil", { date: expiryLabel ?? "—" })}
+                    : auction && isAuctionLive(ad)
+                      ? t("myAds.auctionEndsAt", { date: expiryLabel ?? "—" })
+                      : auction && isAuctionFinished(ad)
+                        ? t("myAds.visibleUntil", { date: expiryLabel ?? "—" })
+                        : t("myAds.liveUntil", { date: expiryLabel ?? "—" })}
                 </p>
               )}
 

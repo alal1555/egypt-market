@@ -6,6 +6,10 @@ export type AuctionDurationHours = (typeof AUCTION_DURATIONS_HOURS)[number];
 export const DEFAULT_AUCTION_BID_INCREMENT = 50;
 export const MIN_AUCTION_BID_INCREMENT = 10;
 export const AUCTION_ANTI_SNIPE_MINUTES = 3;
+/** Public visibility after a successful auction closes. */
+export const AUCTION_POST_SOLD_VISIBILITY_DAYS = 7;
+/** Public visibility after a no-sale auction (reserve not met / no bids). */
+export const AUCTION_POST_NO_SALE_VISIBILITY_DAYS = 14;
 
 export type ListingType = "fixed" | "auction";
 
@@ -43,6 +47,10 @@ export function isAuctionFinished(ad: AuctionAdFields): boolean {
 
 export function isAuctionWon(ad: AuctionAdFields): boolean {
   return ad.auction_status === "ended" || ad.auction_status === "sold";
+}
+
+export function isAuctionNoSale(ad: AuctionAdFields): boolean {
+  return ad.auction_status === "no_sale";
 }
 
 export function getMinimumBid(ad: AuctionAdFields & { price: number }): number {

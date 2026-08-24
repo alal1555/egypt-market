@@ -1,44 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Compass, Heart, LayoutGrid, PlusCircle, Shield, Crown } from "lucide-react";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import AdminPendingBadge from "@/components/AdminPendingBadge";
 import { usePendingAdsCount } from "@/hooks/usePendingAdsCount";
+import { useAuthSession } from "@/hooks/useAuthSession";
 
 export default function BottomNav() {
-  const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const pathname = usePathname();
   const { t } = useTranslation();
+  const { user, userRole } = useAuthSession();
   const isAdmin = userRole === "admin" || userRole === "super";
   const pendingAdsCount = usePendingAdsCount(isAdmin);
-
-  useEffect(() => {
-    const fetchUserRole = async (userId: string) => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .maybeSingle();
-      if (profile) setUserRole(profile.role);
-    };
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchUserRole(currentUser.id);
-      } else {
-        setUserRole(null);
-      }
-    });
-
-    return () => authListener.subscription.unsubscribe();
-  }, []);
 
   // Helper function to highlight the active tab
   const isActive = (path: string) => pathname === path;

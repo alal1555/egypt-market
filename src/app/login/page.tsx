@@ -28,10 +28,16 @@ function LoginForm() {
     setLoading(true);
 
     if (isSignUp) {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback?type=email`
+          : undefined;
+
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: redirectTo,
           data: {
             full_name: formData.fullName,
             phone_number: formData.phone,
@@ -42,9 +48,8 @@ function LoginForm() {
       if (error) {
         alert(error.message);
       } else {
-        alert(t("auth.accountCreated"));
-        router.push("/");
-        router.refresh();
+        alert(t("auth.accountCreatedCheckEmail"));
+        router.push("/login");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({

@@ -16,7 +16,7 @@ import {
   localizedSubCategoryName,
 } from "@/i18n/catalog";
 import { restCloseExpiredAuctions, type AdWithAuction } from "@/lib/auction";
-import { getDisplayPrice, isAuctionListing, isAuctionWon } from "@/constants/auction";
+import { getDisplayPrice, isAuctionListing, isAuctionNoSale, isAuctionWon } from "@/constants/auction";
 
 export default function ProductPage() {
   const params = useParams();
@@ -91,7 +91,18 @@ export default function ProductPage() {
   const auction = isAuctionListing(ad);
   const displayPrice = getDisplayPrice(ad);
   const isSeller = userId === ad.user_id;
-  const showContact = phoneLink && (!auction || (isAuctionWon(ad) && !isSeller));
+  const isWinner = Boolean(userId && ad.auction_winner_id && userId === ad.auction_winner_id);
+  const auctionContactMode =
+    !auction || isSeller
+      ? null
+      : isAuctionNoSale(ad)
+        ? ("negotiate" as const)
+        : isAuctionWon(ad)
+          ? isWinner
+            ? ("winner" as const)
+            : ("inquire" as const)
+          : null;
+  const showContact = Boolean(phoneLink && (!auction || auctionContactMode));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -194,11 +205,24 @@ export default function ProductPage() {
                 </div>
                 {showContact && phoneLink && (
                   <div className="space-y-3 border-t pt-4">
+                    {auctionContactMode === "negotiate" && (
+                      <p className="text-sm text-gray-600 bg-amber-50 rounded-xl p-3 leading-relaxed">
+                        {t("product.negotiateHint")}
+                      </p>
+                    )}
+                    {auctionContactMode === "inquire" && (
+                      <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-3 leading-relaxed">
+                        {t("product.soldInquireHint")}
+                      </p>
+                    )}
                     <a
                       href={`tel:+${phoneLink}`}
                       className="w-full flex items-center justify-center gap-3 bg-[#FF6321] py-3 rounded-2xl font-bold text-white hover:bg-[#e85a1e]"
                     >
-                      <Phone size={18} /> {t("product.callSeller")}
+                      <Phone size={18} />{" "}
+                      {auctionContactMode === "negotiate"
+                        ? t("product.contactToNegotiate")
+                        : t("product.callSeller")}
                     </a>
                     <a
                       href={`https://wa.me/${phoneLink}`}
@@ -206,7 +230,10 @@ export default function ProductPage() {
                       rel="noopener noreferrer"
                       className="w-full flex items-center justify-center gap-3 border-2 border-[#FF6321] py-3 rounded-2xl font-bold text-[#FF6321] hover:bg-orange-50"
                     >
-                      <MessageCircle size={18} /> {t("product.whatsapp")}
+                      <MessageCircle size={18} />{" "}
+                      {auctionContactMode === "negotiate"
+                        ? t("product.whatsappNegotiate")
+                        : t("product.whatsapp")}
                     </a>
                   </div>
                 )}

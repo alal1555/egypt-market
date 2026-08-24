@@ -24,9 +24,11 @@ $$;
 -- ---------------------------------------------------------------------------
 alter table public.profiles
   add column if not exists free_ads_remaining integer not null default 0,
+  add column if not exists free_auctions_remaining integer not null default 0,
   add column if not exists balance numeric not null default 0 check (balance >= 0),
   add column if not exists balance_expires_at timestamptz,
   add column if not exists phone_verified boolean not null default false,
+  add column if not exists email_verification_bonus_granted boolean not null default false,
   add column if not exists welcome_credits_granted boolean not null default false;
 
 -- ---------------------------------------------------------------------------
@@ -36,13 +38,17 @@ create table if not exists public.wallet_transactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   amount numeric not null,
-  type text not null check (
-    type in ('welcome_grant', 'free_ad', 'ad_post', 'admin_credit', 'top_up', 'refund')
-  ),
+  type text not null,
   ad_id uuid references public.ads (id) on delete set null,
   description text,
   created_at timestamptz not null default now()
 );
+
+alter table public.wallet_transactions drop constraint if exists wallet_transactions_type_check;
+alter table public.wallet_transactions add constraint wallet_transactions_type_check
+  check (
+    type in ('welcome_grant', 'free_ad', 'free_auction', 'ad_post', 'admin_credit', 'top_up', 'refund')
+  );
 
 create index if not exists wallet_transactions_user_id_idx
   on public.wallet_transactions (user_id, created_at desc);
@@ -57,8 +63,12 @@ create policy "wallet_transactions_select_own"
 
 -- Inserts only via security definer functions (no client insert policy)
 
+-- Profile display fields (optional — auth.users remains source of truth)
+alter table public.profiles add column if not exists email text;
+alter table public.profiles add column if not exists full_name text;
+
 -- ---------------------------------------------------------------------------
--- Signup: grant 3 free ads to new users (balance comes after phone verify)
+-- Signup: 3 welcome free ads; copy email + name from auth.users
 -- ---------------------------------------------------------------------------
 create or replace function public.handle_new_user()
 returns trigger
@@ -67,24 +77,107 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, role, free_ads_remaining)
-  values (new.id, 'user', 3)
+  insert into public.profiles (id, role, free_ads_remaining, email, full_name)
+  values (
+    new.id,
+    'user',
+    3,
+    new.email,
+    nullif(trim(coalesce(new.raw_user_meta_data->>'full_name', '')), '')
+  )
   on conflict (id) do nothing;
   return new;
 end;
 $$;
 
+-- Backfill email/name for profiles created before this trigger was updated
+update public.profiles p
+set
+  email = coalesce(p.email, u.email),
+  full_name = coalesce(
+    nullif(trim(p.full_name), ''),
+    nullif(trim(u.raw_user_meta_data->>'full_name'), '')
+  )
+from auth.users u
+where u.id = p.id
+  and (p.email is null or nullif(trim(p.full_name), '') is null);
+
 -- ---------------------------------------------------------------------------
--- Backfill: starter free ads for existing users who have none yet
+-- Backfill: welcome free ads for existing users who have none yet
 -- ---------------------------------------------------------------------------
 update public.profiles
 set free_ads_remaining = 3
-where free_ads_remaining = 0
+where free_ads_remaining < 3
   and not welcome_credits_granted;
 
+-- Verified users who never received auction credits (one-time migration)
+update public.profiles
+set free_auctions_remaining = 5
+where email_verification_bonus_granted
+  and free_auctions_remaining = 0;
+
+-- Phone-verified users from the old combined bonus: mark email bonus as granted
+update public.profiles
+set email_verification_bonus_granted = true
+where welcome_credits_granted
+  and not email_verification_bonus_granted;
+
 -- ---------------------------------------------------------------------------
--- Grant 200 EGP wallet balance after phone verification (90-day expiry)
--- Free ads (3) are granted on signup — see handle_new_user() in schema.sql
+-- Email verification bonus: 5 free auctions (requires confirmed email)
+-- ---------------------------------------------------------------------------
+create or replace function public.grant_email_verification_bonus(p_user_id uuid default auth.uid())
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_profile public.profiles%rowtype;
+  v_email_confirmed timestamptz;
+begin
+  if p_user_id is null then
+    return jsonb_build_object('ok', false, 'error', 'not_authenticated');
+  end if;
+
+  select email_confirmed_at into v_email_confirmed
+  from auth.users
+  where id = p_user_id;
+
+  if v_email_confirmed is null then
+    return jsonb_build_object('ok', false, 'error', 'email_not_verified');
+  end if;
+
+  select * into v_profile from public.profiles where id = p_user_id for update;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'profile_not_found');
+  end if;
+
+  if v_profile.email_verification_bonus_granted then
+    return jsonb_build_object(
+      'ok', true,
+      'already_granted', true,
+      'free_ads_remaining', v_profile.free_ads_remaining,
+      'free_auctions_remaining', v_profile.free_auctions_remaining
+    );
+  end if;
+
+  update public.profiles
+  set
+    email_verification_bonus_granted = true,
+    free_auctions_remaining = free_auctions_remaining + 5
+  where id = p_user_id;
+
+  return jsonb_build_object(
+    'ok', true,
+    'free_ads_remaining', v_profile.free_ads_remaining,
+    'free_auctions_remaining', v_profile.free_auctions_remaining + 5
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Phone verification bonus: 200 EGP wallet balance (90-day expiry)
 -- ---------------------------------------------------------------------------
 create or replace function public.grant_welcome_credits(p_user_id uuid default auth.uid())
 returns jsonb
@@ -114,6 +207,7 @@ begin
       'ok', true,
       'already_granted', true,
       'free_ads_remaining', v_profile.free_ads_remaining,
+      'free_auctions_remaining', v_profile.free_auctions_remaining,
       'balance', v_profile.balance,
       'balance_expires_at', v_profile.balance_expires_at
     );
@@ -133,6 +227,7 @@ begin
   return jsonb_build_object(
     'ok', true,
     'free_ads_remaining', v_profile.free_ads_remaining,
+    'free_auctions_remaining', v_profile.free_auctions_remaining,
     'balance', 200,
     'balance_expires_at', (now() + interval '90 days')
   );
@@ -140,7 +235,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Consume one ad credit (free ad first, then 40 EGP from non-expired balance)
+-- Consume one listing credit (fixed: free ad → balance; auction: free auction → balance)
 -- ---------------------------------------------------------------------------
 create or replace function public.consume_ad_credit(
   p_ad_id uuid default null,
@@ -155,6 +250,7 @@ declare
   v_uid uuid := auth.uid();
   v_profile public.profiles%rowtype;
   v_balance_ok boolean;
+  v_is_auction boolean := false;
 begin
   if v_uid is null then
     return jsonb_build_object('ok', false, 'error', 'not_authenticated');
@@ -166,24 +262,43 @@ begin
     return jsonb_build_object('ok', false, 'error', 'profile_not_found');
   end if;
 
-  -- Admins post for free
   if public.is_admin() then
     return jsonb_build_object('ok', true, 'type', 'admin_waiver');
   end if;
 
-  -- Auction listings are free (مزاد)
   if p_ad_id is not null then
-    if exists (
-      select 1 from public.ads
-      where id = p_ad_id
-        and user_id = v_uid
-        and listing_type = 'auction'
-    ) then
-      return jsonb_build_object('ok', true, 'type', 'auction_waiver');
-    end if;
+    select coalesce(
+      (
+        select listing_type = 'auction'
+        from public.ads
+        where id = p_ad_id
+          and user_id = v_uid
+      ),
+      false
+    )
+    into v_is_auction;
   end if;
 
-  if v_profile.free_ads_remaining > 0 then
+  if v_is_auction then
+    if v_profile.free_auctions_remaining > 0 then
+      update public.profiles
+      set free_auctions_remaining = free_auctions_remaining - 1
+      where id = v_uid;
+
+      insert into public.wallet_transactions (user_id, amount, type, ad_id, description)
+      values (v_uid, 0, 'free_auction', p_ad_id, 'Used 1 free auction credit');
+
+      return jsonb_build_object(
+        'ok', true,
+        'type', 'free_auction',
+        'free_auctions_remaining', v_profile.free_auctions_remaining - 1
+      );
+    end if;
+
+    if not v_profile.email_verification_bonus_granted then
+      return jsonb_build_object('ok', false, 'error', 'email_not_verified');
+    end if;
+  elsif v_profile.free_ads_remaining > 0 then
     update public.profiles
     set free_ads_remaining = free_ads_remaining - 1
     where id = v_uid;
@@ -212,7 +327,13 @@ begin
     where id = v_uid;
 
     insert into public.wallet_transactions (user_id, amount, type, ad_id, description)
-    values (v_uid, -p_price, 'ad_post', p_ad_id, 'Standard ad posting fee');
+    values (
+      v_uid,
+      -p_price,
+      'ad_post',
+      p_ad_id,
+      case when v_is_auction then 'Auction posting fee' else 'Standard ad posting fee' end
+    );
 
     return jsonb_build_object(
       'ok', true,
@@ -302,9 +423,92 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Check if user can post an auction (read-only helper for UI)
+-- ---------------------------------------------------------------------------
+create or replace function public.can_post_auction(p_price numeric default 40)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_profile public.profiles%rowtype;
+begin
+  if v_uid is null then
+    return jsonb_build_object('ok', false, 'error', 'not_authenticated');
+  end if;
+
+  select * into v_profile from public.profiles where id = v_uid;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'profile_not_found');
+  end if;
+
+  if public.is_admin() then
+    return jsonb_build_object('ok', true, 'type', 'admin_waiver');
+  end if;
+
+  if v_profile.free_auctions_remaining > 0 then
+    return jsonb_build_object(
+      'ok', true,
+      'type', 'free_auction',
+      'free_auctions_remaining', v_profile.free_auctions_remaining,
+      'balance', v_profile.balance,
+      'phone_verified', v_profile.phone_verified
+    );
+  end if;
+
+  if not v_profile.email_verification_bonus_granted then
+    return jsonb_build_object(
+      'ok', false,
+      'error', 'email_not_verified',
+      'free_auctions_remaining', 0,
+      'balance', v_profile.balance
+    );
+  end if;
+
+  if not v_profile.phone_verified then
+    return jsonb_build_object(
+      'ok', false,
+      'error', 'phone_not_verified',
+      'free_auctions_remaining', 0,
+      'balance', v_profile.balance
+    );
+  end if;
+
+  if v_profile.balance_expires_at is not null
+    and v_profile.balance_expires_at >= now()
+    and v_profile.balance >= p_price then
+    return jsonb_build_object(
+      'ok', true,
+      'type', 'balance',
+      'free_auctions_remaining', 0,
+      'balance', v_profile.balance,
+      'ad_price', p_price
+    );
+  end if;
+
+  if v_profile.balance_expires_at is not null and v_profile.balance_expires_at < now() then
+    return jsonb_build_object('ok', false, 'error', 'balance_expired', 'balance', v_profile.balance);
+  end if;
+
+  return jsonb_build_object(
+    'ok', false,
+    'error', 'insufficient_credits',
+    'free_auctions_remaining', v_profile.free_auctions_remaining,
+    'balance', v_profile.balance
+  );
+end;
+$$;
+
+grant execute on function public.grant_email_verification_bonus(uuid) to authenticated;
 grant execute on function public.grant_welcome_credits(uuid) to authenticated;
 grant execute on function public.consume_ad_credit(uuid, numeric) to authenticated;
 grant execute on function public.can_post_ad(numeric) to authenticated;
+grant execute on function public.can_post_auction(numeric) to authenticated;
 
 -- Reload PostgREST schema cache (Supabase API)
 notify pgrst, 'reload schema';

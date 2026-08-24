@@ -212,11 +212,13 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 |--------|------|-------|
 | `id` | uuid PK | FK → `auth.users.id` |
 | `role` | text | `user` \| `admin` \| `super` |
-| `free_ads_remaining` | int | Starter free ad slots (3 on signup) |
+| `free_ads_remaining` | int | Free fixed-price ad slots (3 on signup) |
+| `free_auctions_remaining` | int | Free auction slots (+5 after email verify) |
 | `balance` | numeric | Wallet balance in EGP |
 | `balance_expires_at` | timestamptz | Welcome balance expiry (90 days) |
 | `phone_verified` | boolean | Required to spend wallet balance |
-| `welcome_credits_granted` | boolean | One-time 200 EGP welcome balance |
+| `email_verification_bonus_granted` | boolean | +5 auctions granted after email confirm |
+| `welcome_credits_granted` | boolean | One-time 200 EGP welcome balance (phone verify) |
 | `created_at` | timestamptz | auto |
 
 ### `wallet_transactions`
@@ -231,7 +233,11 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 | `description` | text | |
 | `created_at` | timestamptz | |
 
-**Ad posting:** 3 free ads on signup; 40 EGP per ad from wallet balance after that. Phone verify required for balance. Each approved listing stays live **30 days** (`expires_at`); renew via `renew_ad`. RPC: `can_post_ad`, `consume_ad_credit`, `grant_welcome_credits`, `renew_ad`.
+**Ad posting:** 3 free fixed ads on signup; **email verify** for 5 free auctions (`grant_email_verification_bonus`); **phone verify** for 200 EGP wallet (90 days, `grant_welcome_credits`). Then 40 EGP/ad from balance. RPCs: `can_post_ad`, `can_post_auction`, `consume_ad_credit`, `renew_ad`.
+
+**Supabase Auth:** Enable **Confirm email** in Authentication → Providers → Email. Add redirect URL: `http://localhost:3000/auth/callback?type=email` (and production URL).
+
+**Auctions:** live while `auction_ends_at` is in the future. After close, `close_expired_auctions()` sets `expires_at` to **7 days** (sold) or **14 days** (`no_sale`) for public visibility on home/search.
 
 Auto-created on signup via `handle_new_user()` trigger.
 
