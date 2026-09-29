@@ -99,6 +99,8 @@ export const ar = {
   pricing: {
     title: "أسعار الإعلانات",
     subtitle: "أسعار بسيطة وشفافة للنشر على يدي",
+    launchFreePromo:
+      "كل الإعلانات مجانية في فترة الإطلاق — انشر بقدر ما تشاء بينما ننمّي السوق.",
   },
   common: {
     loading: "جاري التحميل...",
@@ -222,6 +224,8 @@ export const ar = {
     verifyPhoneLink: "تحقق من الهاتف لفتح رصيد المحفظة ←",
     verifyEmailLink: "تحقق من البريد لفتح المكافآت ←",
     adminFree: "حساب مدير — النشر مجاني.",
+    freePromo: "عرض الإطلاق — النشر مجاني حالياً. لا حاجة لرصيد أو محفظة.",
+    pricingHintPromo: "النشر مجاني خلال فترة الإطلاق.",
     useFreeAd: "سيستخدم هذا الإعلان 1 مجاني ({remaining} متبقية).",
     useFreeAuction: "سيستخدم هذا المزاد 1 مزاد مجاني ({remaining} متبقية).",
     balanceLeft: " الرصيد: {balance} ج.م.",

@@ -5,6 +5,7 @@ import {
   AD_LIVE_DAYS,
   AD_POST_PRICE_EGP,
   BALANCE_EXPIRY_DAYS,
+  FREE_LISTINGS_PROMO,
   SIGNUP_FREE_ADS,
   EMAIL_VERIFY_BONUS_FREE_ADS,
   EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
@@ -16,6 +17,7 @@ export {
   AD_LIVE_DAYS,
   AD_POST_PRICE_EGP,
   BALANCE_EXPIRY_DAYS,
+  FREE_LISTINGS_PROMO,
   SIGNUP_FREE_ADS,
   EMAIL_VERIFY_BONUS_FREE_ADS,
   EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
@@ -118,6 +120,9 @@ export function canPostFromProfile(
   profile: ProfileRow,
   price: number = AD_POST_PRICE_EGP
 ): CanPostResult {
+  if (FREE_LISTINGS_PROMO) {
+    return { ok: true, type: "promo_waiver" };
+  }
   if (profile.role === "admin" || profile.role === "super") {
     return { ok: true, type: "admin_waiver" };
   }
@@ -160,6 +165,9 @@ export function canPostAuctionFromProfile(
   profile: ProfileRow,
   price: number = AD_POST_PRICE_EGP
 ): CanPostResult {
+  if (FREE_LISTINGS_PROMO) {
+    return { ok: true, type: "promo_waiver" };
+  }
   if (profile.role === "admin" || profile.role === "super") {
     return { ok: true, type: "admin_waiver" };
   }
@@ -242,6 +250,9 @@ export async function checkCanPostAd(
   client: SupabaseClient,
   userId: string
 ): Promise<CanPostResult> {
+  if (FREE_LISTINGS_PROMO) {
+    return { ok: true, type: "promo_waiver" };
+  }
   const { data, error } = await client.rpc("can_post_ad", { p_price: AD_POST_PRICE_EGP });
 
   if (!error && data) {
@@ -276,6 +287,9 @@ export async function checkCanPostAuction(
   client: SupabaseClient,
   userId: string
 ): Promise<CanPostResult> {
+  if (FREE_LISTINGS_PROMO) {
+    return { ok: true, type: "promo_waiver" };
+  }
   const { data, error } = await client.rpc("can_post_auction", { p_price: AD_POST_PRICE_EGP });
 
   if (!error && data) {
@@ -340,6 +354,9 @@ export async function consumeAdCredit(
   client: SupabaseClient,
   adId: string
 ): Promise<ConsumeResult> {
+  if (FREE_LISTINGS_PROMO) {
+    return { ok: true, type: "promo_waiver" };
+  }
   const { data, error } = await client.rpc("consume_ad_credit", {
     p_ad_id: adId,
     p_price: AD_POST_PRICE_EGP,

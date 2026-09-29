@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { CheckCircle, Gift, Tag } from "lucide-react";
+import { FREE_LISTINGS_PROMO } from "@/constants/adPricing";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { pricingAr } from "@/i18n/content/pricing.ar";
 import { pricingEn } from "@/i18n/content/pricing.en";
 
 export default function PricingClient() {
-  const { locale } = useTranslation();
+  const { locale, t } = useTranslation();
   const c = locale === "ar" ? pricingAr : pricingEn;
 
   return (
@@ -15,6 +16,11 @@ export default function PricingClient() {
       <div className="text-center mb-10">
         <p className="text-sm font-bold uppercase tracking-wide text-[#FF6321] mb-2">{c.badge}</p>
         <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-3">{c.title}</h1>
+        {FREE_LISTINGS_PROMO ? (
+          <p className="text-gray-800 max-w-2xl mx-auto font-bold text-lg mb-2">
+            {t("pricing.launchFreePromo")}
+          </p>
+        ) : null}
         <p className="text-gray-600 max-w-2xl mx-auto">{c.intro}</p>
       </div>
 

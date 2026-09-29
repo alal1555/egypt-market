@@ -9,6 +9,7 @@ import { CATEGORY_CONFIG, getCategoryGroups } from "@/constants/categoryConfig";
 import {
   AD_POST_PRICE_EGP,
   CanPostResult,
+  FREE_LISTINGS_PROMO,
   EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
   SIGNUP_FREE_ADS,
   WELCOME_BALANCE_EGP,
@@ -262,10 +263,10 @@ export default function PostAdPage() {
         </div>
       );
     }
-    if (postCheck.type === "admin_waiver") {
+    if (postCheck.type === "admin_waiver" || postCheck.type === "promo_waiver") {
       return (
         <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
-          {t("postAd.adminFree")}
+          {postCheck.type === "admin_waiver" ? t("postAd.adminFree") : t("postAd.freePromo")}
         </div>
       );
     }
@@ -301,15 +302,19 @@ export default function PostAdPage() {
     <div className="max-w-3xl mx-auto p-8 bg-white shadow-xl rounded-2xl my-10 border border-gray-100">
       <h1 className="text-3xl font-bold text-gray-800 mb-4 text-center">{t("postAd.title")}</h1>
       <p className="text-center text-sm text-gray-500 mb-6">
-        {t("postAd.pricingHint", {
-          price: AD_POST_PRICE_EGP,
-          signupFreeAds: SIGNUP_FREE_ADS,
-          bonusFreeAuctions: EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
-          welcomeBalance: WELCOME_BALANCE_EGP,
-        })}{" "}
-        <Link href="/pricing" className="text-[#FF6321] font-bold hover:underline">
-          {t("postAd.fullPriceList")}
-        </Link>
+        {FREE_LISTINGS_PROMO
+          ? t("postAd.pricingHintPromo")
+          : t("postAd.pricingHint", {
+              price: AD_POST_PRICE_EGP,
+              signupFreeAds: SIGNUP_FREE_ADS,
+              bonusFreeAuctions: EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
+              welcomeBalance: WELCOME_BALANCE_EGP,
+            })}{" "}
+        {!FREE_LISTINGS_PROMO && (
+          <Link href="/pricing" className="text-[#FF6321] font-bold hover:underline">
+            {t("postAd.fullPriceList")}
+          </Link>
+        )}
       </p>
 
       {renderCreditBanner()}

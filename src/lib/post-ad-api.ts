@@ -1,6 +1,6 @@
 /** Post-ad flow via Supabase REST — avoids supabase-js auth lock on RPC/storage. */
 
-import { AD_POST_PRICE_EGP } from "@/constants/adPricing";
+import { AD_POST_PRICE_EGP, FREE_LISTINGS_PROMO } from "@/constants/adPricing";
 import type { CanPostResult, ConsumeResult } from "@/lib/wallet";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -28,6 +28,9 @@ export async function restCanPostAd(
   accessToken: string,
   price: number = AD_POST_PRICE_EGP,
 ): Promise<CanPostResult> {
+  if (FREE_LISTINGS_PROMO) {
+    return { ok: true, type: "promo_waiver" };
+  }
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/can_post_ad`, {
     method: "POST",
     headers: authHeaders(accessToken, { "Content-Type": "application/json" }),
@@ -42,6 +45,9 @@ export async function restCanPostAuction(
   accessToken: string,
   price: number = AD_POST_PRICE_EGP,
 ): Promise<CanPostResult> {
+  if (FREE_LISTINGS_PROMO) {
+    return { ok: true, type: "promo_waiver" };
+  }
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/can_post_auction`, {
     method: "POST",
     headers: authHeaders(accessToken, { "Content-Type": "application/json" }),
@@ -121,6 +127,9 @@ export async function restConsumeAdCredit(
   adId: string,
   price: number = AD_POST_PRICE_EGP,
 ): Promise<ConsumeResult> {
+  if (FREE_LISTINGS_PROMO) {
+    return { ok: true, type: "promo_waiver" };
+  }
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/consume_ad_credit`, {
     method: "POST",
     headers: authHeaders(accessToken, { "Content-Type": "application/json" }),

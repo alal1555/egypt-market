@@ -99,6 +99,7 @@ export const en = {
   pricing: {
     title: "Ad Pricing",
     subtitle: "Simple, transparent pricing for posting on Yaddii",
+    launchFreePromo: "All listings are free during our launch — post as much as you like while we grow the marketplace.",
   },
   common: {
     loading: "Loading...",
@@ -223,6 +224,8 @@ export const en = {
     verifyPhoneLink: "Verify phone to unlock wallet balance →",
     verifyEmailLink: "Verify email to unlock bonus credits →",
     adminFree: "Admin account — posting is free.",
+    freePromo: "Launch offer — posting is free for now. No credits or wallet balance needed.",
+    pricingHintPromo: "Posting is free during our launch period.",
     useFreeAd: "This ad will use 1 free ad ({remaining} free remaining).",
     useFreeAuction: "This auction will use 1 free auction ({remaining} free remaining).",
     balanceLeft: " Balance: {balance} EGP.",

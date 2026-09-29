@@ -233,7 +233,7 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 | `description` | text | |
 | `created_at` | timestamptz | |
 
-**Ad posting:** 3 free fixed ads on signup; **email verify** for 5 free auctions (`grant_email_verification_bonus`); **phone verify** for 200 EGP wallet (90 days, `grant_welcome_credits`). Then 40 EGP/ad from balance. RPCs: `can_post_ad`, `can_post_auction`, `consume_ad_credit`, `renew_ad`.
+**Ad posting:** Launch promo — when `listings_free_promo_enabled()` returns `true` (see `wallet.sql`), all posts and renewals are free. When disabled: 3 free fixed ads on signup; **email verify** for 5 free auctions; **phone verify** for 200 EGP wallet (90 days). Then 40 EGP/ad from balance. RPCs: `can_post_ad`, `can_post_auction`, `consume_ad_credit`, `renew_ad`.
 
 **Supabase Auth:** Enable **Confirm email** in Authentication → Providers → Email. Add redirect URL: `http://localhost:3000/auth/callback?type=email` (and production URL).
 

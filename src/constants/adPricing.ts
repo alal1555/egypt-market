@@ -1,5 +1,8 @@
 /** Ad posting prices — single source of truth for wallet RPCs and the public price list. */
 
+/** Launch mode: all listings free (no credits). Set false when paid posting goes live. */
+export const FREE_LISTINGS_PROMO = true;
+
 export const AD_POST_PRICE_EGP = 40;
 /** Free fixed-price ads granted on signup (before verification). */
 export const SIGNUP_FREE_ADS = 3;

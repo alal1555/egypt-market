@@ -235,6 +235,17 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Launch promo: free posting for all users (flip to false when payments launch)
+-- ---------------------------------------------------------------------------
+create or replace function public.listings_free_promo_enabled()
+returns boolean
+language sql
+immutable
+as $$
+  select true
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Consume one listing credit (fixed: free ad → balance; auction: free auction → balance)
 -- ---------------------------------------------------------------------------
 create or replace function public.consume_ad_credit(
@@ -254,6 +265,10 @@ declare
 begin
   if v_uid is null then
     return jsonb_build_object('ok', false, 'error', 'not_authenticated');
+  end if;
+
+  if public.listings_free_promo_enabled() then
+    return jsonb_build_object('ok', true, 'type', 'promo_waiver');
   end if;
 
   select * into v_profile from public.profiles where id = v_uid for update;
@@ -379,6 +394,10 @@ begin
     return jsonb_build_object('ok', true, 'type', 'admin_waiver');
   end if;
 
+  if public.listings_free_promo_enabled() then
+    return jsonb_build_object('ok', true, 'type', 'promo_waiver');
+  end if;
+
   if v_profile.free_ads_remaining > 0 then
     return jsonb_build_object(
       'ok', true,
@@ -449,6 +468,10 @@ begin
 
   if public.is_admin() then
     return jsonb_build_object('ok', true, 'type', 'admin_waiver');
+  end if;
+
+  if public.listings_free_promo_enabled() then
+    return jsonb_build_object('ok', true, 'type', 'promo_waiver');
   end if;
 
   if v_profile.free_auctions_remaining > 0 then
