@@ -20,10 +20,11 @@ import {
   normalizeEgyptPhone,
 } from "@/lib/wallet";
 import { getAccessToken } from "@/lib/auth-client";
+import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = normalizeSupabaseProjectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
 
 function authErrorMessage(body: Record<string, unknown>, status: number): string {
   const msg =

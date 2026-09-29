@@ -7,8 +7,10 @@ import { supabase } from "@/lib/supabase";
 import { resolveRecoveryAccessToken, signOutSafely, withTimeout } from "@/lib/auth-client";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
+
+const supabaseUrl = normalizeSupabaseProjectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
 
 async function updatePasswordWithToken(accessToken: string, password: string) {
   const response = await fetch(`${supabaseUrl}/auth/v1/user`, {

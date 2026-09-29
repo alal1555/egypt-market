@@ -2,8 +2,9 @@
 
 import { AD_POST_PRICE_EGP, FREE_LISTINGS_PROMO } from "@/constants/adPricing";
 import type { CanPostResult, ConsumeResult } from "@/lib/wallet";
+import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseUrl = normalizeSupabaseProjectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function authHeaders(accessToken: string, extra?: Record<string, string>): Record<string, string> {

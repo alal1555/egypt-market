@@ -16,6 +16,7 @@ import {
 } from "@/lib/wallet";
 import { cleanAdAttributes } from "@/lib/utils";
 import { readStoredAccessToken } from "@/lib/auth-client";
+import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
 import {
   restCanPostAd,
   restCanPostAuction,
@@ -78,7 +79,7 @@ export default function PostAdPage() {
     async function loadMakes() {
       setLoadingMakes(true);
       try {
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const url = normalizeSupabaseProjectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
         const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
         const res = await fetch(`${url}/rest/v1/makes?select=id,name&order=name.asc`, {
           headers: { apikey: key, Authorization: `Bearer ${key}` },

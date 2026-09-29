@@ -1,6 +1,8 @@
 /** My ads list via Supabase REST — avoids supabase-js auth lock after posting. */
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
+
+const supabaseUrl = normalizeSupabaseProjectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function authHeaders(accessToken: string): Record<string, string> {

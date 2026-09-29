@@ -2,7 +2,9 @@
 
 import type { AuctionAdFields } from "@/constants/auction";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
+
+const supabaseUrl = normalizeSupabaseProjectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export type PlaceBidResult =

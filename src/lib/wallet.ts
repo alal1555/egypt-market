@@ -1,6 +1,7 @@
 /** Wallet & ad posting credits — Yaddii Marketplace */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
 import {
   AD_LIVE_DAYS,
   AD_POST_PRICE_EGP,
@@ -222,8 +223,8 @@ export type EmailBonusResult = {
 };
 
 export async function grantEmailVerificationBonus(accessToken: string): Promise<EmailBonusResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = normalizeSupabaseProjectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
 
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/grant_email_verification_bonus`, {
     method: "POST",

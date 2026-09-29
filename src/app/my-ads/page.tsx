@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getSessionUser, readStoredAccessToken } from "@/lib/auth-client";
+import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
 import { restDeleteMyAd, restFetchMyAds, type MyAdRow } from "@/lib/my-ads-api";
 import AdCard from "@/components/AdCard";
 import Link from "next/link";
@@ -46,7 +47,7 @@ export default function MyAdsPage() {
       setUser(sessionUser);
 
       const accessToken = readStoredAccessToken();
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseUrl = normalizeSupabaseProjectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
       const [adsList, makesRes, modelsRes] = await Promise.all([
