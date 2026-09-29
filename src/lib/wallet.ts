@@ -38,7 +38,7 @@ export type WalletProfile = {
 export type CanPostResult = {
   ok: boolean;
   error?: string;
-  type?: "free_ad" | "free_auction" | "balance" | "admin_waiver";
+  type?: "free_ad" | "free_auction" | "balance" | "admin_waiver" | "promo_waiver";
   free_ads_remaining?: number;
   free_auctions_remaining?: number;
   balance?: number;

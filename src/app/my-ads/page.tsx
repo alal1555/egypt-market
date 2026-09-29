@@ -16,11 +16,11 @@ import {
 } from "@/constants/adPricing";
 import { renewAdListing } from "@/lib/wallet";
 import { useTranslation } from "@/i18n/LocaleProvider";
-import { getDisplayPrice, isAuctionFinished, isAuctionListing, isAuctionLive, type AuctionAdFields } from "@/constants/auction";
+import { getDisplayPrice, isAuctionFinished, isAuctionListing, isAuctionLive } from "@/constants/auction";
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
 import ShareAdMenu from "@/components/ShareAdMenu";
 
-interface Ad extends AuctionAdFields, MyAdRow {}
+type Ad = MyAdRow;
 
 export default function MyAdsPage() {
   const [ads, setAds] = useState<Ad[]>([]);
@@ -183,8 +183,16 @@ export default function MyAdsPage() {
                 category={ad.category_slug}
                 imageUrl={ad.images?.[0]}
                 specs={extractSpecs(ad.attributes)}
-                makeName={ad.attributes?.make_id ? makesMap[ad.attributes.make_id] : undefined}
-                modelName={ad.attributes?.model_id ? modelsMap[ad.attributes.model_id] : undefined}
+                makeName={
+                  ad.attributes?.make_id != null
+                    ? makesMap[Number(ad.attributes.make_id)]
+                    : undefined
+                }
+                modelName={
+                  ad.attributes?.model_id != null
+                    ? modelsMap[Number(ad.attributes.model_id)]
+                    : undefined
+                }
               />
 
               {ad.status === "active" && ad.expires_at && (

@@ -263,7 +263,7 @@ export default function PostAdPage() {
         </div>
       );
     }
-    if (postCheck.type === "admin_waiver" || postCheck.type === "promo_waiver") {
+    if (postCheck.type === "admin_waiver" || FREE_LISTINGS_PROMO) {
       return (
         <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
           {postCheck.type === "admin_waiver" ? t("postAd.adminFree") : t("postAd.freePromo")}

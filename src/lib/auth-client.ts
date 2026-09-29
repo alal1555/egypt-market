@@ -165,7 +165,8 @@ export async function completeAuthCallback(
 /** If Supabase sends tokens to `/` instead of `/auth/callback`, forward once. */
 export function redirectAuthParamsToCallback(): boolean {
   if (typeof window === "undefined") return false;
-  if (window.location.pathname === "/auth/callback") return false;
+  const pathname = window.location.pathname;
+  if (pathname === "/auth/callback") return false;
 
   const search = window.location.search;
   const hash = window.location.hash;
@@ -175,8 +176,54 @@ export function redirectAuthParamsToCallback(): boolean {
 
   if (!hasQueryAuth && !hasHashAuth) return false;
 
+  // Password reset links target /reset-password — do not bounce through /auth/callback.
+  if (pathname === "/reset-password") return false;
+
   window.location.replace(`/auth/callback${search}${hash}`);
   return true;
+}
+
+/** Read recovery token from email link (hash, token_hash, or PKCE code). */
+export async function resolveRecoveryAccessToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+
+  const parsed = parseAuthHash();
+  if (parsed?.type === "recovery") {
+    const token = await applyAuthHashSession();
+    return token;
+  }
+
+  const search = new URLSearchParams(window.location.search);
+  const flow = search.get("type");
+  const tokenHash = search.get("token_hash");
+
+  if (flow === "recovery" && tokenHash) {
+    const { data, error } = await withTimeout(
+      supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: "recovery",
+      }),
+      15_000,
+      "Password reset link timed out",
+    );
+    if (error) throw error;
+    window.history.replaceState(null, "", window.location.pathname);
+    return data.session?.access_token ?? null;
+  }
+
+  const code = search.get("code");
+  if (flow === "recovery" && code) {
+    const { data, error } = await withTimeout(
+      supabase.auth.exchangeCodeForSession(code),
+      15_000,
+      "Password reset link timed out",
+    );
+    if (error) throw error;
+    window.history.replaceState(null, "", window.location.pathname);
+    return data.session?.access_token ?? null;
+  }
+
+  return null;
 }
 
 export async function getAccessToken(ms = 8_000): Promise<string> {

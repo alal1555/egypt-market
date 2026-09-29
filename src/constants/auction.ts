@@ -16,7 +16,7 @@ export type ListingType = "fixed" | "auction";
 export type AuctionStatus = "pending" | "live" | "ended" | "no_sale" | "sold";
 
 export type AuctionAdFields = {
-  listing_type?: ListingType | string;
+  listing_type?: ListingType | string | null;
   auction_bid_increment?: number | null;
   auction_reserve_price?: number | null;
   auction_duration_hours?: AuctionDurationHours | null;
@@ -24,7 +24,7 @@ export type AuctionAdFields = {
   auction_status?: AuctionStatus | string | null;
   auction_current_bid?: number | null;
   auction_winner_id?: string | null;
-  auction_bid_count?: number;
+  auction_bid_count?: number | null;
   auction_verification_code?: string | null;
 };
 

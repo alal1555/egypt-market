@@ -4,22 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { resolveRecoveryAccessToken, signOutSafely, withTimeout } from "@/lib/auth-client";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-function parseRecoveryHash() {
-  if (typeof window === "undefined" || !window.location.hash) return null;
-
-  const params = new URLSearchParams(window.location.hash.substring(1));
-  const accessToken = params.get("access_token");
-  const type = params.get("type");
-
-  if (type !== "recovery" || !accessToken) return null;
-
-  return { accessToken };
-}
 
 async function updatePasswordWithToken(accessToken: string, password: string) {
   const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
@@ -47,24 +36,32 @@ export default function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const accessTokenRef = useRef<string | null>(null);
+  const initStartedRef = useRef(false);
 
   useEffect(() => {
-    const recovery = parseRecoveryHash();
-    if (recovery) {
-      accessTokenRef.current = recovery.accessToken;
-      window.history.replaceState(null, "", window.location.pathname);
-      setReady(true);
-      return;
-    }
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        accessTokenRef.current = session.access_token;
-        setReady(true);
-      } else {
+    void (async () => {
+      try {
+        const recoveryToken = await resolveRecoveryAccessToken();
+        if (recoveryToken) {
+          accessTokenRef.current = recoveryToken;
+          setReady(true);
+          return;
+        }
+
+        const { data } = await withTimeout(supabase.auth.getSession(), 8_000);
+        if (data.session?.access_token) {
+          accessTokenRef.current = data.session.access_token;
+          setReady(true);
+        } else {
+          setError(t("resetPassword.invalidLink"));
+        }
+      } catch {
         setError(t("resetPassword.invalidLink"));
       }
-    });
+    })();
   }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,7 +87,7 @@ export default function ResetPasswordPage() {
 
     try {
       await updatePasswordWithToken(token, password);
-      await supabase.auth.signOut();
+      await signOutSafely();
       alert(t("resetPassword.updated"));
       router.push("/login");
       router.refresh();

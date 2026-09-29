@@ -51,13 +51,6 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-async function getAccessToken(): Promise<string> {
-  const { data } = await withTimeout(supabase.auth.getSession(), 8_000);
-  const token = data.session?.access_token;
-  if (!token) throw new Error("Session expired — please log in again.");
-  return token;
-}
-
 /** Direct REST call — avoids supabase-js updateUser hanging while SMS hook runs */
 async function updateAuthUser(
   accessToken: string,
@@ -370,8 +363,9 @@ export default function ProfileClient() {
 
       const granted = await grantWelcomeCredits(accessToken);
       setWallet((prev) => ({
-        free_ads_remaining: granted.free_ads_remaining ?? prev?.free_ads_remaining ?? 0,
-        free_auctions_remaining: granted.free_auctions_remaining ?? prev?.free_auctions_remaining ?? 0,
+        free_ads_remaining: prev?.free_ads_remaining ?? 0,
+        free_auctions_remaining: prev?.free_auctions_remaining ?? 0,
+        email_verification_bonus_granted: prev?.email_verification_bonus_granted ?? false,
         balance: Number(granted.balance ?? prev?.balance ?? 0),
         balance_expires_at: granted.balance_expires_at ?? prev?.balance_expires_at ?? null,
         phone_verified: true,
