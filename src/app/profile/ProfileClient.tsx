@@ -12,6 +12,7 @@ import {
 import {
   AD_POST_PRICE_EGP,
   EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
+  FREE_LISTINGS_PROMO,
   WELCOME_BALANCE_EGP,
   WalletProfile,
   adsRemainingFromBalance,
@@ -476,45 +477,61 @@ export default function ProfileClient() {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-              <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAds")}</p>
-              <p className="text-2xl font-black text-[#FF6321]">{wallet?.free_ads_remaining ?? 0}</p>
-              {!wallet?.phone_verified && (
-                <p className="text-[10px] text-gray-400 mt-1">{t("profile.starterPack")}</p>
-              )}
-            </div>
-            {wallet?.email_verification_bonus_granted ? (
-              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-                <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAuctions")}</p>
-                <p className="text-2xl font-black text-[#FF6321]">{wallet.free_auctions_remaining ?? 0}</p>
-              </div>
-            ) : null}
-            {wallet?.phone_verified ? (
-              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-                <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
-                <p className="text-2xl font-black text-[#FF6321]">
-                  {wallet.balance} {t("common.egp")}
-                </p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  {t("profile.walletAdsHint", {
-                    count: adsRemainingFromBalance(
-                      wallet.balance,
-                      isBalanceExpired(wallet.balance_expires_at),
-                    ),
-                    price: AD_POST_PRICE_EGP,
-                  })}
-                </p>
-              </div>
+            {FREE_LISTINGS_PROMO ? (
+              <>
+                <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                  <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAds")}</p>
+                  <p className="text-lg font-black text-[#FF6321] mt-1">{t("profile.freePromoIncluded")}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                  <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAuctions")}</p>
+                  <p className="text-lg font-black text-[#FF6321] mt-1">{t("profile.freePromoIncluded")}</p>
+                </div>
+                <p className="text-xs text-gray-500 sm:col-span-2 lg:col-span-3">{t("postAd.freePromo")}</p>
+              </>
             ) : (
-              <div className="p-4 rounded-xl bg-gray-50 border sm:col-span-3">
-                <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
-                <p className="text-lg font-black text-gray-700 mt-1">
-                  {t("profile.unlockBalance", { amount: WELCOME_BALANCE_EGP })}
-                </p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  {t("profile.perAdAfterFree", { price: AD_POST_PRICE_EGP })}
-                </p>
-              </div>
+              <>
+                <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                  <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAds")}</p>
+                  <p className="text-2xl font-black text-[#FF6321]">{wallet?.free_ads_remaining ?? 0}</p>
+                  {!wallet?.phone_verified && (
+                    <p className="text-[10px] text-gray-400 mt-1">{t("profile.starterPack")}</p>
+                  )}
+                </div>
+                {wallet?.email_verification_bonus_granted ? (
+                  <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                    <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.freeAuctions")}</p>
+                    <p className="text-2xl font-black text-[#FF6321]">{wallet.free_auctions_remaining ?? 0}</p>
+                  </div>
+                ) : null}
+                {wallet?.phone_verified ? (
+                  <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                    <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
+                    <p className="text-2xl font-black text-[#FF6321]">
+                      {wallet.balance} {t("common.egp")}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {t("profile.walletAdsHint", {
+                        count: adsRemainingFromBalance(
+                          wallet.balance,
+                          isBalanceExpired(wallet.balance_expires_at),
+                        ),
+                        price: AD_POST_PRICE_EGP,
+                      })}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-gray-50 border sm:col-span-3">
+                    <p className="text-xs font-bold text-gray-500 uppercase">{t("profile.walletBalance")}</p>
+                    <p className="text-lg font-black text-gray-700 mt-1">
+                      {t("profile.unlockBalance", { amount: WELCOME_BALANCE_EGP })}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {t("profile.perAdAfterFree", { price: AD_POST_PRICE_EGP })}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -525,9 +542,11 @@ export default function ProfileClient() {
                 {t("profile.emailVerifyTitle")}
               </p>
               <p className="text-sm text-blue-800 mb-3">
-                {t("profile.emailUnlockDesc", {
-                  bonusFreeAuctions: EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
-                })}
+                {FREE_LISTINGS_PROMO
+                  ? t("profile.emailUnlockDescPromo")
+                  : t("profile.emailUnlockDesc", {
+                      bonusFreeAuctions: EMAIL_VERIFY_BONUS_FREE_AUCTIONS,
+                    })}
               </p>
               <button
                 type="button"
@@ -541,7 +560,7 @@ export default function ProfileClient() {
             </div>
           )}
 
-          {!wallet?.phone_verified && (
+          {!FREE_LISTINGS_PROMO && !wallet?.phone_verified && (
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
               <p className="flex items-center gap-2 font-bold text-amber-900 mb-2">
                 <Gift size={18} />
@@ -635,7 +654,7 @@ export default function ProfileClient() {
             </div>
           )}
 
-          {wallet?.phone_verified && wallet.balance_expires_at && (
+          {!FREE_LISTINGS_PROMO && wallet?.phone_verified && wallet.balance_expires_at && (
             <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
               <CheckCircle size={14} className="text-emerald-500" />
               {t("profile.balanceValidUntil", {
@@ -645,7 +664,9 @@ export default function ProfileClient() {
             </p>
           )}
 
-          <p className="text-xs text-gray-400 mt-3">{t("profile.topUpSoon")}</p>
+          {!FREE_LISTINGS_PROMO && (
+            <p className="text-xs text-gray-400 mt-3">{t("profile.topUpSoon")}</p>
+          )}
         </div>
 
         <form onSubmit={handleSave} className="p-8 space-y-6">
@@ -667,7 +688,7 @@ export default function ProfileClient() {
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
               <Phone size={16} /> {t("auth.phone")}
             </label>
-            {wallet?.phone_verified ? (
+            {wallet?.phone_verified || FREE_LISTINGS_PROMO ? (
               <input
                 type="tel"
                 value={formData.phone}

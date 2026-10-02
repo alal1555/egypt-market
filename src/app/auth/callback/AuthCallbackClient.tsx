@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { completeAuthCallback } from "@/lib/auth-client";
+import { completeAuthCallback, signOutSafely } from "@/lib/auth-client";
 import { grantEmailVerificationBonus } from "@/lib/wallet";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
@@ -41,9 +41,10 @@ export default function AuthCallbackClient() {
           try {
             await grantEmailVerificationBonus(result.accessToken);
           } catch {
-            // Email may already be confirmed — still send user to profile.
+            // Bonus may already be granted — still finish confirm flow.
           }
-          router.replace("/profile?emailVerified=1");
+          await signOutSafely();
+          router.replace("/login?verified=1");
           return;
         }
 

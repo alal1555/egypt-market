@@ -63,7 +63,14 @@ export const ar = {
     forgotPassword: "نسيت كلمة المرور؟",
     accountCreated: "تم إنشاء الحساب بنجاح!",
     accountCreatedCheckEmail:
-      "تم إنشاء الحساب مع 3 إعلانات مجانية! تحقق من بريدك لفتح المزادات المجانية.",
+      "تم إنشاء الحساب! افتح رابط التأكيد في بريدك، ثم عد لتسجيل الدخول.",
+    loginEmailNotConfirmed:
+      "يجب تأكيد بريدك أولاً — افتح الرابط في رسالة التأكيد، ثم حاول تسجيل الدخول مرة أخرى.",
+    resendConfirmEmail: "إعادة إرسال رسالة التأكيد",
+    loginResendSent: "تم إرسال رسالة التأكيد. تحقق من بريدك (والبريد المزعج)، اضغط الرابط، ثم سجّل الدخول.",
+    emailVerifiedLogin: "تم تأكيد البريد! يمكنك تسجيل الدخول الآن.",
+    emailRateLimit:
+      "تم تجاوز حد إرسال البريد الافتراضي في Supabase (التسجيل وإعادة الإرسال ونسيت كلمة المرور تحسب). انتظر نحو ساعة، أو فعّل SMTP مخصصاً من لوحة Supabase. يمكنك أيضاً تأكيد الحساب يدوياً من Authentication → Users.",
     processing: "جاري المعالجة...",
     toggleToLogin: "لديك حساب بالفعل؟ سجّل الدخول",
     toggleToSignup: "ليس لديك حساب؟ سجّل الآن",
@@ -161,6 +168,7 @@ export const ar = {
     walletTitle: "رصيد الإعلانات والمحفظة",
     freeAds: "إعلانات مجانية",
     freeAuctions: "مزادات مجانية",
+    freePromoIncluded: "متاحة الآن",
     starterPack: "3 إعلانات مجانية عند التسجيل",
     walletBalance: "رصيد المحفظة",
     walletAdsHint: "~{count} إعلانات · {price} ج.م لكل إعلان",
@@ -173,6 +181,7 @@ export const ar = {
       "لديك {signupFreeAds} إعلانات مجانية للبدء. تحقق من بريدك لفتح {bonusFreeAuctions} مزادات مجانية.",
     emailVerifyTitle: "تحقق من بريدك الإلكتروني",
     emailUnlockDesc: "أكّد بريدك لفتح {bonusFreeAuctions} مزادات مجانية.",
+    emailUnlockDescPromo: "أكّد بريدك لتأمين حسابك.",
     phoneUnlockDesc: "تحقق من رقمك المصري أدناه لإضافة {amount} ج.م إلى محفظتك (صالحة 90 يوماً).",
     resendEmail: "إعادة إرسال رسالة التأكيد",
     emailResent: "تم إرسال رسالة التأكيد — راجع بريدك.",

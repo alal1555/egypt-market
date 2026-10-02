@@ -3,6 +3,11 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import {
+  getEmailConfirmRedirectUrl,
+  isEmailNotConfirmedAuthError,
+  isEmailRateLimitAuthError,
+} from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/i18n/LocaleProvider";
 
@@ -16,22 +21,31 @@ function LoginForm() {
     fullName: "",
   });
   const [loading, setLoading] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [loginHint, setLoginHint] = useState<string | null>(null);
+  const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false);
+  const [emailRateLimited, setEmailRateLimited] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
 
   useEffect(() => {
     setIsSignUp(searchParams.get("mode") === "signup");
-  }, [searchParams]);
+    if (searchParams.get("verified") === "1") {
+      setLoginHint(t("auth.emailVerifiedLogin"));
+    }
+  }, [searchParams, t]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    setLoginHint(null);
+    setNeedsEmailConfirm(false);
+    setEmailRateLimited(false);
+
     if (isSignUp) {
       const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/auth/callback?type=email`
-          : undefined;
+        typeof window !== "undefined" ? getEmailConfirmRedirectUrl() : undefined;
 
       const { error } = await supabase.auth.signUp({
         email: formData.email,
@@ -46,7 +60,11 @@ function LoginForm() {
       });
 
       if (error) {
-        alert(error.message);
+        if (isEmailRateLimitAuthError(error.message)) {
+          setEmailRateLimited(true);
+        } else {
+          alert(error.message);
+        }
       } else {
         alert(t("auth.accountCreatedCheckEmail"));
         router.push("/login");
@@ -58,7 +76,12 @@ function LoginForm() {
       });
 
       if (error) {
-        alert(error.message);
+        if (isEmailNotConfirmedAuthError(error.message)) {
+          setNeedsEmailConfirm(true);
+          setLoginHint(t("auth.loginEmailNotConfirmed"));
+        } else {
+          alert(error.message);
+        }
       } else {
         router.push("/");
         router.refresh();
@@ -70,7 +93,35 @@ function LoginForm() {
   const toggleMode = () => {
     const nextIsSignUp = !isSignUp;
     setIsSignUp(nextIsSignUp);
+    setLoginHint(null);
+    setNeedsEmailConfirm(false);
+    setEmailRateLimited(false);
     router.replace(nextIsSignUp ? "/login?mode=signup" : "/login");
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!formData.email.trim()) return;
+    setResendingEmail(true);
+    setLoginHint(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: formData.email.trim(),
+        options: { emailRedirectTo: getEmailConfirmRedirectUrl() },
+      });
+      if (error) throw error;
+      setLoginHint(t("auth.loginResendSent"));
+      setNeedsEmailConfirm(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("profile.emailResendFailed");
+      if (isEmailRateLimitAuthError(message)) {
+        setEmailRateLimited(true);
+      } else {
+        alert(message);
+      }
+    } finally {
+      setResendingEmail(false);
+    }
   };
 
   return (
@@ -79,6 +130,32 @@ function LoginForm() {
         <h1 className="text-2xl font-black text-center mb-6">
           {isSignUp ? t("auth.signupTitle") : t("auth.loginTitle")}
         </h1>
+
+        {emailRateLimited ? (
+          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-900">
+            <p>{t("auth.emailRateLimit")}</p>
+          </div>
+        ) : null}
+
+        {!isSignUp && searchParams.get("verified") === "1" ? (
+          <div className="mb-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
+            <p>{loginHint ?? t("auth.emailVerifiedLogin")}</p>
+          </div>
+        ) : null}
+
+        {!isSignUp && needsEmailConfirm && searchParams.get("verified") !== "1" ? (
+          <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-900 space-y-2">
+            <p>{loginHint ?? t("auth.loginEmailNotConfirmed")}</p>
+            <button
+              type="button"
+              onClick={handleResendConfirmation}
+              disabled={resendingEmail || !formData.email.trim()}
+              className="text-[#FF6321] font-bold underline disabled:opacity-60"
+            >
+              {resendingEmail ? t("auth.processing") : t("auth.resendConfirmEmail")}
+            </button>
+          </div>
+        ) : null}
 
         <form onSubmit={handleAuth} className="space-y-4">
           {isSignUp && (

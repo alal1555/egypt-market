@@ -237,6 +237,16 @@ Super admins can promote others to `admin` from `/admin/dashboard`.
 
 **Supabase Auth:** Enable **Confirm email** in Authentication → Providers → Email. Add redirect URL: `http://localhost:3000/auth/callback?type=email` (and production URL).
 
+**Branded auth email (Brevo, free tier):** Domain DNS lives at Namecheap or Netlify (wherever nameservers point). App hosting stays on Netlify.
+
+1. [Brevo](https://www.brevo.com) → **Senders, Domains & Dedicated IPs** → add domain `yaddii.com` → add DNS records (Brevo code TXT, DKIM, DMARC) without removing Netlify `@` / `www` records → authenticate.
+2. **Senders** → add sender `noreply@yaddii.com` (name **Yaddii**), verify if prompted.
+3. **Settings → SMTP & API → SMTP** → copy **Login** (`…@smtp-brevo.com`) → **Generate SMTP key** (password for Supabase; not the REST API key).
+4. Supabase → **Authentication → SMTP** (or Project Settings → Auth → SMTP): enable custom SMTP — host `smtp-relay.brevo.com`, port **587** (or **465** + TLS), user = Brevo SMTP login, password = SMTP key, sender `noreply@yaddii.com`, name **Yaddii**.
+5. **Authentication → Email templates** — subjects/bodies for confirm + reset; keep `{{ .ConfirmationURL }}`.
+6. **Authentication → Rate limits** — raise email sends (e.g. **300/hour** cap is fine; Brevo free plan limits **300/day** total).
+7. **URL configuration:** Site URL `https://yaddii.com`; redirects include `https://yaddii.com/auth/callback?type=email`.
+
 **Auctions:** live while `auction_ends_at` is in the future. After close, `close_expired_auctions()` sets `expires_at` to **7 days** (sold) or **14 days** (`no_sale`) for public visibility on home/search.
 
 Auto-created on signup via `handle_new_user()` trigger.

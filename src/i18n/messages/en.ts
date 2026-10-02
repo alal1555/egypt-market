@@ -63,7 +63,14 @@ export const en = {
     forgotPassword: "Forgot password?",
     accountCreated: "Account created successfully!",
     accountCreatedCheckEmail:
-      "Account created with 3 free ads! Check your email to unlock free auctions.",
+      "Account created! Open the confirmation link in your email, then come back here to log in.",
+    loginEmailNotConfirmed:
+      "Please confirm your email first — open the link we sent you, then try logging in again.",
+    resendConfirmEmail: "Resend confirmation email",
+    loginResendSent: "Confirmation email sent. Check your inbox (and spam), click the link, then log in.",
+    emailVerifiedLogin: "Email confirmed! You can log in now.",
+    emailRateLimit:
+      "Too many confirmation emails were sent recently (sign up, resend, and forgot-password all count). Please wait about an hour, then try again. Check spam if you signed up earlier — the link may already be there.",
     processing: "Processing...",
     toggleToLogin: "Already have an account? Login",
     toggleToSignup: "Don't have an account? Sign Up",
@@ -160,6 +167,7 @@ export const en = {
     walletTitle: "Ad Credits & Balance",
     freeAds: "Free ads",
     freeAuctions: "Free auctions",
+    freePromoIncluded: "Included now",
     starterPack: "3 free ads on signup",
     walletBalance: "Wallet balance",
     walletAdsHint: "~{count} ads at {price} EGP each",
@@ -173,6 +181,7 @@ export const en = {
     emailVerifyTitle: "Verify your email",
     emailUnlockDesc:
       "Confirm your email to unlock {bonusFreeAuctions} free auction listings.",
+    emailUnlockDescPromo: "Confirm your email to secure your account.",
     phoneUnlockDesc: "Verify your Egyptian mobile below to add {amount} EGP to your wallet (valid 90 days).",
     resendEmail: "Resend confirmation email",
     emailResent: "Confirmation email sent — check your inbox.",

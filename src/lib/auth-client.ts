@@ -92,10 +92,6 @@ export type AuthCallbackResult =
   | { ok: true; accessToken: string; flow: "email" | "recovery" | "signin" }
   | { ok: false; error: string; redirectToReset?: boolean };
 
-function getOtpTypeFromSearch(search: URLSearchParams): string {
-  return search.get("type") ?? "email";
-}
-
 /** Handle Supabase email links (token_hash query, PKCE code, or implicit hash). */
 export async function completeAuthCallback(
   search: URLSearchParams,
@@ -109,28 +105,47 @@ export async function completeAuthCallback(
 
   const tokenHash = search.get("token_hash");
   if (tokenHash) {
-    const otpType = getOtpTypeFromSearch(search);
-    const { data, error } = await withTimeout(
-      supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: otpType as "signup" | "email" | "magiclink",
-      }),
-      15_000,
-      "Email verification timed out",
-    );
-    if (error) throw error;
+    const explicit = search.get("type");
+    const otpTypes: Array<"signup" | "email" | "magiclink"> = [];
+    if (explicit === "signup" || explicit === "email" || explicit === "magiclink") {
+      otpTypes.push(explicit);
+    }
+    // Signup confirm emails often need type signup even when redirect URL has type=email.
+    if (!otpTypes.includes("signup")) otpTypes.push("signup");
+    if (!otpTypes.includes("email")) otpTypes.push("email");
 
-    const accessToken = data.session?.access_token;
-    if (!accessToken) throw new Error("email_verify_no_session");
+    let lastError: Error | null = null;
+    for (const otpType of otpTypes) {
+      const { data, error } = await withTimeout(
+        supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: otpType,
+        }),
+        15_000,
+        "Email verification timed out",
+      );
+      if (error) {
+        lastError = error;
+        continue;
+      }
 
-    window.history.replaceState(null, "", window.location.pathname);
-    const isEmailFlow =
-      otpType === "signup" || otpType === "email" || otpType === "magiclink" || flow === "email";
-    return {
-      ok: true,
-      accessToken,
-      flow: isEmailFlow ? "email" : "signin",
-    };
+      const accessToken = data.session?.access_token;
+      if (!accessToken) {
+        lastError = new Error("email_verify_no_session");
+        continue;
+      }
+
+      window.history.replaceState(null, "", window.location.pathname);
+      const isEmailFlow =
+        otpType === "signup" || otpType === "email" || otpType === "magiclink" || flow === "email";
+      return {
+        ok: true,
+        accessToken,
+        flow: isEmailFlow ? "email" : "signin",
+      };
+    }
+
+    throw lastError ?? new Error("email_verify_failed");
   }
 
   const code = search.get("code");
@@ -160,6 +175,21 @@ export async function completeAuthCallback(
   }
 
   return { ok: true, accessToken, flow: "signin" };
+}
+
+export function isEmailNotConfirmedAuthError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes("email not confirmed") || lower.includes("email_not_confirmed");
+}
+
+export function isEmailRateLimitAuthError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes("rate limit") || lower.includes("rate_limit");
+}
+
+export function getEmailConfirmRedirectUrl(): string {
+  if (typeof window === "undefined") return "";
+  return `${window.location.origin}/auth/callback?type=email`;
 }
 
 /** If Supabase sends tokens to `/` instead of `/auth/callback`, forward once. */
