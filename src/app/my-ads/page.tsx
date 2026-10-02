@@ -7,11 +7,12 @@ import { normalizeSupabaseProjectUrl } from "@/lib/supabase-url";
 import { restDeleteMyAd, restFetchMyAds, type MyAdRow } from "@/lib/my-ads-api";
 import AdCard from "@/components/AdCard";
 import Link from "next/link";
-import { Trash2, Edit3, Plus, RefreshCw, CalendarClock } from "lucide-react";
+import { Trash2, Edit3, Plus, RefreshCw, CalendarClock, Tag } from "lucide-react";
 import { extractSpecs } from "@/lib/utils";
 import {
   AD_LIVE_DAYS,
   AD_POST_PRICE_EGP,
+  FREE_LISTINGS_PROMO,
   formatExpiryDate,
   getListingDisplayStatus,
 } from "@/constants/adPricing";
@@ -29,6 +30,7 @@ export default function MyAdsPage() {
   const [user, setUser] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [renewingId, setRenewingId] = useState<string | null>(null);
+  const [soldToggleId, setSoldToggleId] = useState<string | null>(null);
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
   const { t } = useTranslation();
@@ -102,11 +104,10 @@ export default function MyAdsPage() {
   };
 
   const handleRenew = async (adId: string) => {
-    if (
-      !window.confirm(
-        t("myAds.renewConfirm", { days: AD_LIVE_DAYS, price: AD_POST_PRICE_EGP }),
-      )
-    ) {
+    const confirmMsg = FREE_LISTINGS_PROMO
+      ? t("myAds.renewConfirmFree", { days: AD_LIVE_DAYS })
+      : t("myAds.renewConfirm", { days: AD_LIVE_DAYS, price: AD_POST_PRICE_EGP });
+    if (!window.confirm(confirmMsg)) {
       return;
     }
 
@@ -128,6 +129,28 @@ export default function MyAdsPage() {
       t("myAds.renewed", {
         date: formatExpiryDate(result.expires_at) ?? "—",
       }),
+    );
+  };
+
+  const handleToggleSold = async (ad: Ad) => {
+    const marking = !ad.marked_sold_at;
+    if (marking && !window.confirm(t("myAds.markSoldConfirm"))) return;
+    setSoldToggleId(ad.id);
+    const { error } = await supabase
+      .from("ads")
+      .update({ marked_sold_at: marking ? new Date().toISOString() : null })
+      .eq("id", ad.id);
+    setSoldToggleId(null);
+    if (error) {
+      alert(t("myAds.errorPrefix") + (error.message.includes("marked_sold") ? t("myAds.soldMigrationRequired") : error.message));
+      return;
+    }
+    setAds((prev) =>
+      prev.map((row) =>
+        row.id === ad.id
+          ? { ...row, marked_sold_at: marking ? new Date().toISOString() : null }
+          : row,
+      ),
     );
   };
 
@@ -239,7 +262,28 @@ export default function MyAdsPage() {
                     <RefreshCw size={16} />
                     {renewingId === ad.id
                       ? t("myAds.renewing")
-                      : t("myAds.renew", { price: AD_POST_PRICE_EGP })}
+                      : FREE_LISTINGS_PROMO
+                        ? t("myAds.renewFree", { days: AD_LIVE_DAYS })
+                        : t("myAds.renew", { price: AD_POST_PRICE_EGP })}
+                  </button>
+                )}
+                {ad.status === "active" && !auction && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSold(ad)}
+                    disabled={soldToggleId === ad.id}
+                    className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition disabled:opacity-60 ${
+                      ad.marked_sold_at
+                        ? "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+                    }`}
+                  >
+                    <Tag size={16} />
+                    {soldToggleId === ad.id
+                      ? t("myAds.soldUpdating")
+                      : ad.marked_sold_at
+                        ? t("myAds.unmarkSold")
+                        : t("myAds.markSold")}
                   </button>
                 )}
                 <div className="flex gap-2">

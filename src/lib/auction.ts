@@ -178,4 +178,5 @@ export type AdWithAuction = AuctionAdFields & {
   images?: string[];
   seller_phone?: string | null;
   attributes?: Record<string, unknown>;
+  marked_sold_at?: string | null;
 };

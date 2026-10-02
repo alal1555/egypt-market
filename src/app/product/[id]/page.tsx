@@ -7,6 +7,7 @@ import { Phone, MessageCircle, MapPin } from "lucide-react";
 import AdCard from "@/components/AdCard";
 import AuctionPanel from "@/components/AuctionPanel";
 import ShareAdMenu from "@/components/ShareAdMenu";
+import SoldStampOverlay from "@/components/SoldStampOverlay";
 import { extractSpecs, formatPhoneForLink, cleanAdAttributes } from "@/lib/utils";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import {
@@ -28,6 +29,7 @@ export default function ProductPage() {
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
   const [userId, setUserId] = useState<string | null>(null);
+  const [soldUpdating, setSoldUpdating] = useState(false);
   const { t, locale } = useTranslation();
 
   const patchAd = useCallback((patch: Partial<AdWithAuction>) => {
@@ -103,6 +105,24 @@ export default function ProductPage() {
             : ("inquire" as const)
           : null;
   const showContact = Boolean(phoneLink && (!auction || auctionContactMode));
+  const isMarkedSold = Boolean(ad.marked_sold_at);
+
+  const handleToggleSold = async () => {
+    if (!ad || !isSeller || auction) return;
+    const marking = !ad.marked_sold_at;
+    if (marking && !window.confirm(t("myAds.markSoldConfirm"))) return;
+    setSoldUpdating(true);
+    const { error } = await supabase
+      .from("ads")
+      .update({ marked_sold_at: marking ? new Date().toISOString() : null })
+      .eq("id", ad.id);
+    setSoldUpdating(false);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    patchAd({ marked_sold_at: marking ? new Date().toISOString() : null });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -110,7 +130,10 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             <div className="rounded-3xl bg-white p-4 shadow-sm border border-gray-100">
-              <img src={activeImage || ""} alt={ad.title} className="w-full h-96 object-contain rounded-2xl" />
+              <div className="relative rounded-2xl overflow-hidden bg-gray-50">
+                <img src={activeImage || ""} alt={ad.title} className="w-full h-96 object-contain" />
+                {isMarkedSold ? <SoldStampOverlay size="hero" /> : null}
+              </div>
               <div className="flex gap-2 mt-4 overflow-x-auto">
                 {ad.images?.map((img: string, idx: number) => (
                   <button
@@ -168,6 +191,24 @@ export default function ProductPage() {
                 </div>
 
                 <div className="space-y-3">
+                  {isSeller && !auction ? (
+                    <button
+                      type="button"
+                      onClick={handleToggleSold}
+                      disabled={soldUpdating}
+                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm transition disabled:opacity-60 ${
+                        isMarkedSold
+                          ? "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                          : "bg-red-50 text-red-700 border-2 border-red-300 hover:bg-red-100"
+                      }`}
+                    >
+                      {soldUpdating
+                        ? t("myAds.soldUpdating")
+                        : isMarkedSold
+                          ? t("myAds.unmarkSold")
+                          : t("myAds.markSold")}
+                    </button>
+                  ) : null}
                   {phoneLink ? (
                     <>
                       <a

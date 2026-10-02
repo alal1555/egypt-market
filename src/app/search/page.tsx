@@ -20,6 +20,7 @@ interface Ad {
   auction_bid_count?: number;
   auction_ends_at?: string | null;
   auction_status?: string | null;
+  marked_sold_at?: string | null;
 }
 
 function SearchResults() {
@@ -286,6 +287,7 @@ function SearchResults() {
                 auction_bid_count={ad.auction_bid_count}
                 auction_ends_at={ad.auction_ends_at}
                 auction_status={ad.auction_status}
+                marked_sold_at={ad.marked_sold_at}
               />
             ))}
           </div>

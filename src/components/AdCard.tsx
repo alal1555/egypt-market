@@ -18,6 +18,7 @@ import {
   getAttributeLabelForKey,
   localizedAttributeLabel,
 } from "@/i18n/catalog";
+import SoldStampOverlay from "@/components/SoldStampOverlay";
 
 interface AdProps extends AuctionAdFields {
   id: string;
@@ -33,12 +34,14 @@ interface AdProps extends AuctionAdFields {
   currentUserId?: string | null; 
   status?: string; 
   expires_at?: string | null;
+  marked_sold_at?: string | null;
   showStatus?: boolean;
 }
 
 export default function AdCard({ 
   id, title, price, location, imageUrl, specs = {}, postedDate,
-  makeName, modelName, currentUserId: propUserId, status = "active", expires_at, showStatus = false,
+  makeName, modelName, currentUserId: propUserId, status = "active", expires_at, marked_sold_at,
+  showStatus = false,
   category = "",
   listing_type,
   auction_current_bid,
@@ -116,6 +119,7 @@ export default function AdCard({
 
   const displayStatus = showStatus ? getListingDisplayStatus({ status, expires_at }) : null;
   const isExpiredListing = displayStatus === "expired";
+  const isMarkedSold = Boolean(marked_sold_at);
 
   const displayImage = imageUrl || "https://via.placeholder.com/600x400?text=No+Image";
 
@@ -145,6 +149,7 @@ export default function AdCard({
 
         <div className="relative h-48 w-full overflow-hidden bg-gray-50 flex-shrink-0">
           <img src={displayImage} alt={title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+          {isMarkedSold ? <SoldStampOverlay size="card" /> : null}
         </div>
         
         {/* Added 'flex flex-col flex-grow' to push footer to the bottom */}

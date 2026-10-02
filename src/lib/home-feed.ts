@@ -20,6 +20,7 @@ export type HomeAd = {
   auction_bid_count?: number;
   auction_ends_at?: string | null;
   auction_status?: string | null;
+  marked_sold_at?: string | null;
 };
 
 export type HomeFeedData = {

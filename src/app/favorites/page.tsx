@@ -16,6 +16,7 @@ interface Ad {
   images: string[];
   attributes?: any;
   created_at?: string;
+  marked_sold_at?: string | null;
 }
 
 export default function FavoritesPage() {
@@ -127,6 +128,7 @@ export default function FavoritesPage() {
               // Vehicle-specific lookups (will be undefined for pets/others)
               makeName={ad.attributes?.make_id ? makesMap[ad.attributes.make_id] : undefined}
               modelName={ad.attributes?.model_id ? modelsMap[ad.attributes.model_id] : undefined}
+              marked_sold_at={ad.marked_sold_at}
             />
           ))}
         </div>
