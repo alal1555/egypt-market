@@ -25,6 +25,7 @@ export const ar = {
     logIn: "تسجيل الدخول",
     myProfile: "ملفي",
     adPricing: "انشر مجاناً",
+    contactUs: "تواصل معنا",
     about: "من نحن",
     terms: "شروط الاستخدام",
     privacy: "سياسة الخصوصية",

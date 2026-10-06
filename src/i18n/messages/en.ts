@@ -25,6 +25,7 @@ export const en = {
     logIn: "Log in",
     myProfile: "My profile",
     adPricing: "Free posting",
+    contactUs: "Contact us",
     about: "About",
     terms: "Terms of use",
     privacy: "Privacy policy",

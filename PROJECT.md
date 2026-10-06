@@ -88,6 +88,10 @@ No API routes except **wallet top-up** (`/api/wallet/top-up/*` for Paymob). Sche
 | `/wallet/top-up` | Add EGP balance via Paymob |
 | `/wallet/top-up/result` | Payment confirmation page |
 | `/pricing` | Ad posting price list |
+| `/contact` | Support email (copy / mailto); in-app form planned later |
+| `/about` | About Yaddii |
+| `/terms` | Terms of use |
+| `/privacy` | Privacy policy |
 | `/admin/dashboard` | Ad approval + super-admin role management |
 
 ---

@@ -95,6 +95,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/contact" className="text-sm text-gray-600 hover:text-[#FF6321] transition-colors">
+                  {t("footer.contactUs")}
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="text-sm text-gray-600 hover:text-[#FF6321] transition-colors">
                   {t("footer.about")}
                 </Link>
@@ -124,6 +129,10 @@ export default function Footer() {
         <span className="mx-2">·</span>
         <Link href="/pricing" className="hover:text-[#FF6321]">
           {t("footer.pricing")}
+        </Link>
+        <span className="mx-2">·</span>
+        <Link href="/contact" className="hover:text-[#FF6321]">
+          {t("footer.contactUs")}
         </Link>
         <span className="mx-2">·</span>
         <Link href="/about" className="hover:text-[#FF6321]">
