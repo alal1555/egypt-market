@@ -5,7 +5,22 @@ import { CheckCircle, Gift, Tag } from "lucide-react";
 import { FREE_LISTINGS_PROMO } from "@/constants/adPricing";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { pricingArLaunch, pricingArPaid } from "@/i18n/content/pricing.ar";
-import { pricingEnLaunch, pricingEnPaid } from "@/i18n/content/pricing.en";
+import { pricingEnLaunch, pricingEnPaid, type PricingContent } from "@/i18n/content/pricing.en";
+
+const PROMO_HIDDEN_PLAN_IDS = new Set(["standard", "welcome_balance"]);
+
+function plansForDisplay(content: PricingContent, promo: boolean) {
+  if (!promo) return content.plans;
+  return content.plans.filter((plan) => !PROMO_HIDDEN_PLAN_IDS.has(plan.id));
+}
+
+function tableForDisplay(content: PricingContent, promo: boolean) {
+  if (!promo) return content.table;
+  return content.table.filter((row) => {
+    const price = row.price.toLowerCase();
+    return !price.includes("egp") && !price.includes("ج.م");
+  });
+}
 
 export default function PricingClient() {
   const { locale } = useTranslation();
@@ -17,6 +32,8 @@ export default function PricingClient() {
       : FREE_LISTINGS_PROMO
         ? pricingEnLaunch
         : pricingEnPaid;
+  const visiblePlans = plansForDisplay(c, FREE_LISTINGS_PROMO);
+  const visibleTable = tableForDisplay(c, FREE_LISTINGS_PROMO);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 md:py-12">
@@ -30,14 +47,14 @@ export default function PricingClient() {
 
       <div
         className={`grid grid-cols-1 gap-6 mb-10 ${
-          c.plans.length === 1
+          visiblePlans.length === 1
             ? "max-w-md mx-auto"
-            : c.plans.length === 2
+            : visiblePlans.length === 2
               ? "md:grid-cols-2 max-w-3xl mx-auto"
               : "md:grid-cols-3"
         }`}
       >
-        {c.plans.map((plan) => {
+        {visiblePlans.map((plan) => {
           const highlighted = FREE_LISTINGS_PROMO ? plan.id === "launch" : plan.id === "standard";
           return (
           <div
@@ -78,7 +95,7 @@ export default function PricingClient() {
         })}
       </div>
 
-      {c.table.length > 0 ? (
+      {visibleTable.length > 0 ? (
         <div className="rounded-3xl border border-gray-200 bg-white overflow-hidden mb-10">
           <div className="px-6 py-4 bg-gray-50 border-b">
             <h2 className="font-black text-gray-900">{c.quickRef}</h2>
@@ -93,7 +110,7 @@ export default function PricingClient() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {c.table.map((row) => (
+                {visibleTable.map((row) => (
                   <tr key={row.item}>
                     <td className="px-6 py-4 font-semibold text-gray-900">{row.item}</td>
                     <td
