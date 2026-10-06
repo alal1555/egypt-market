@@ -8,7 +8,7 @@ import { pricingArLaunch, pricingArPaid } from "@/i18n/content/pricing.ar";
 import { pricingEnLaunch, pricingEnPaid } from "@/i18n/content/pricing.en";
 
 export default function PricingClient() {
-  const { locale, t } = useTranslation();
+  const { locale } = useTranslation();
   const c =
     locale === "ar"
       ? FREE_LISTINGS_PROMO
@@ -23,16 +23,19 @@ export default function PricingClient() {
       <div className="text-center mb-10">
         <p className="text-sm font-bold uppercase tracking-wide text-[#FF6321] mb-2">{c.badge}</p>
         <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-3">{c.title}</h1>
-        {FREE_LISTINGS_PROMO ? (
-          <p className="text-gray-800 max-w-2xl mx-auto font-bold text-lg mb-2">
-            {t("pricing.launchFreePromo")}
-          </p>
-        ) : null}
-        <p className="text-gray-600 max-w-2xl mx-auto">{c.intro}</p>
+        <p className={`max-w-2xl mx-auto ${FREE_LISTINGS_PROMO ? "text-gray-600 text-lg" : "text-gray-600"}`}>
+          {c.intro}
+        </p>
       </div>
 
       <div
-        className={`grid grid-cols-1 gap-6 mb-10 ${c.plans.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-3"}`}
+        className={`grid grid-cols-1 gap-6 mb-10 ${
+          c.plans.length === 1
+            ? "max-w-md mx-auto"
+            : c.plans.length === 2
+              ? "md:grid-cols-2 max-w-3xl mx-auto"
+              : "md:grid-cols-3"
+        }`}
       >
         {c.plans.map((plan) => {
           const highlighted = FREE_LISTINGS_PROMO ? plan.id === "launch" : plan.id === "standard";
@@ -75,35 +78,41 @@ export default function PricingClient() {
         })}
       </div>
 
-      <div className="rounded-3xl border border-gray-200 bg-white overflow-hidden mb-10">
-        <div className="px-6 py-4 bg-gray-50 border-b">
-          <h2 className="font-black text-gray-900">{c.quickRef}</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="px-6 py-3 font-bold">{c.colItem}</th>
-                <th className="px-6 py-3 font-bold">{c.colPrice}</th>
-                <th className="px-6 py-3 font-bold">{c.colNotes}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {c.table.map((row) => (
-                <tr key={row.item}>
-                  <td className="px-6 py-4 font-semibold text-gray-900">{row.item}</td>
-                  <td className={`px-6 py-4 font-black ${row.price === c.comingSoon ? "text-gray-400" : "text-[#FF6321]"}`}>
-                    {row.price}
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">{row.notes}</td>
+      {c.table.length > 0 ? (
+        <div className="rounded-3xl border border-gray-200 bg-white overflow-hidden mb-10">
+          <div className="px-6 py-4 bg-gray-50 border-b">
+            <h2 className="font-black text-gray-900">{c.quickRef}</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-gray-500">
+                  <th className="px-6 py-3 font-bold">{c.colItem}</th>
+                  <th className="px-6 py-3 font-bold">{c.colPrice}</th>
+                  <th className="px-6 py-3 font-bold">{c.colNotes}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {c.table.map((row) => (
+                  <tr key={row.item}>
+                    <td className="px-6 py-4 font-semibold text-gray-900">{row.item}</td>
+                    <td
+                      className={`px-6 py-4 font-black ${row.price === c.comingSoon ? "text-gray-400" : "text-[#FF6321]"}`}
+                    >
+                      {row.price}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">{row.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+      <div
+        className={`grid grid-cols-1 gap-8 mb-10 ${c.faq.length > 0 ? "md:grid-cols-2" : ""}`}
+      >
         <div>
           <h2 className="font-black text-gray-900 mb-4">{c.howBilling}</h2>
           <ul className="space-y-2 text-sm text-gray-600">
@@ -115,17 +124,19 @@ export default function PricingClient() {
             ))}
           </ul>
         </div>
-        <div>
-          <h2 className="font-black text-gray-900 mb-4">{c.faqTitle}</h2>
-          <div className="space-y-4">
-            {c.faq.map((item) => (
-              <div key={item.q}>
-                <p className="font-bold text-gray-900 text-sm">{item.q}</p>
-                <p className="text-sm text-gray-600 mt-1">{item.a}</p>
-              </div>
-            ))}
+        {c.faq.length > 0 ? (
+          <div>
+            <h2 className="font-black text-gray-900 mb-4">{c.faqTitle}</h2>
+            <div className="space-y-4">
+              {c.faq.map((item) => (
+                <div key={item.q}>
+                  <p className="font-bold text-gray-900 text-sm">{item.q}</p>
+                  <p className="text-sm text-gray-600 mt-1">{item.a}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-3 justify-center">

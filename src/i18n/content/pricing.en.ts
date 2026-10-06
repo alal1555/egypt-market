@@ -27,76 +27,40 @@ const pricingShared = {
 /** Copy when FREE_LISTINGS_PROMO is true (current live site). */
 export const pricingEnLaunch = {
   ...pricingShared,
+  badge: "Yaddii",
+  title: "Post for free",
+  howBilling: "Good to know",
   intro:
-    "Yaddii is live at yaddii.com. Right now every standard listing and renewal is free — no wallet or credits needed. Each approved ad stays visible for 30 days; renew from My Ads for another month at no charge during launch.",
+    "Every listing is free right now — fixed price or auction, all categories. Sign up, post your ad, and we review it before it goes live on yaddii.com.",
   plans: [
     {
       id: "launch",
-      name: "Launch posting",
+      name: "Free listings",
       priceLabel: "Free",
-      subtitle: "Active now for all sellers",
+      subtitle: "For everyone, no payment step",
       badge: "Now",
       features: [
-        "Unlimited standard listings during launch",
-        "All categories, fixed price and auctions",
-        "Admin review before going live",
-        `${AD_LIVE_DAYS} days live after approval`,
-        "Free renewal while launch pricing applies",
-      ],
-    },
-    {
-      id: "standard",
-      name: "Standard ad (planned)",
-      priceLabel: `${AD_POST_PRICE_EGP} EGP`,
-      subtitle: "Not charged until we announce paid posting",
-      badge: "Later",
-      features: [
-        "One listing submission after launch pricing starts",
-        "Multiple photos and category-specific details",
-        "Call and WhatsApp on your ad",
-        `${AD_LIVE_DAYS} days live after approval`,
+        "Post as many ads as you need",
+        "Photos, details, call & WhatsApp on your listing",
+        "Admin review before your ad appears",
+        `${AD_LIVE_DAYS} days live after approval — renew free from My Ads`,
       ],
     },
   ],
-  table: [
-    { item: "Standard listing (launch)", price: "Free", notes: "Post and renew at no cost during launch" },
-    { item: "Auction listings (launch)", price: "Free", notes: "Same launch policy as fixed-price ads" },
-    { item: "Ad renewal (launch)", price: "Free", notes: `Extend for another ${AD_LIVE_DAYS} days from My Ads` },
-    {
-      item: `Standard ad (after launch)`,
-      price: `${AD_POST_PRICE_EGP} EGP`,
-      notes: `Planned per listing · we will update this page before charging`,
-    },
-    {
-      item: "Ad renewal (after launch)",
-      price: `${AD_POST_PRICE_EGP} EGP`,
-      notes: `Planned · same as a new standard ad`,
-    },
-    { item: "Featured / boosted ads", price: "Coming soon", notes: "Higher visibility options planned" },
-  ],
+  table: [],
   notes: [
-    "During launch you are not charged when you submit or renew a standard listing.",
-    `Listings stay live for ${AD_LIVE_DAYS} days after admin approval, then hide from search until you renew.`,
-    "We will post an update on this page and in the app before any paid posting or wallet charges begin.",
-    "Email verification helps secure your account; phone and wallet bonuses may return when paid features launch.",
-    "Admin accounts post for free.",
+    "You are not charged to submit or renew a listing while posting is free.",
+    `After approval, your ad stays on the marketplace for ${AD_LIVE_DAYS} days. Renew from My Ads when it expires.`,
+    "Questions? Email support@yaddii.com.",
   ],
   faq: [
     {
-      q: "Do I pay anything to post now?",
-      a: "No. During our launch period, posting and renewing standard listings is free.",
+      q: "Is posting really free?",
+      a: "Yes. There is no payment or wallet step when you post or renew right now.",
     },
     {
       q: "How long does my ad stay live?",
-      a: `Each approved listing is visible for ${AD_LIVE_DAYS} days. After that it is hidden from search; renew from My Ads for another ${AD_LIVE_DAYS} days at no charge during launch.`,
-    },
-    {
-      q: "When will paid posting start?",
-      a: "We have not set a date. We will update this page and notify registered users before standard ads cost money.",
-    },
-    {
-      q: "Do I pay again if my ad is rejected?",
-      a: "During launch, rejection does not cost you anything. If paid posting is active later and your ad is rejected unfairly, contact support@yaddii.com.",
+      a: `Each approved ad is visible for ${AD_LIVE_DAYS} days. Renew from My Ads for another ${AD_LIVE_DAYS} days at no cost.`,
     },
   ],
 };
@@ -196,7 +160,7 @@ export const pricingEnPaid = {
   ],
 };
 
-export type PricingContent = Omit<typeof pricingEnLaunch, "plans"> & {
+export type PricingContent = Omit<typeof pricingEnLaunch, "plans" | "table" | "notes" | "faq"> & {
   plans: Array<{
     id: string;
     name: string;
@@ -205,6 +169,9 @@ export type PricingContent = Omit<typeof pricingEnLaunch, "plans"> & {
     badge?: string;
     features: string[];
   }>;
+  table: Array<{ item: string; price: string; notes: string }>;
+  notes: string[];
+  faq: Array<{ q: string; a: string }>;
 };
 
 export const pricingEn = pricingEnLaunch;
