@@ -42,7 +42,8 @@ create table if not exists public.ads (
   seller_phone text,
   status text not null default 'pending' check (status in ('pending', 'active', 'banned')),
   created_at timestamptz not null default now(),
-  expires_at timestamptz
+  expires_at timestamptz,
+  marked_sold_at timestamptz
 );
 
 create index if not exists ads_status_created_at_idx on public.ads (status, created_at desc);
@@ -52,6 +53,7 @@ create index if not exists ads_category_slug_idx on public.ads (category_slug);
 comment on column public.ads.attributes is 'Category-specific fields from categoryConfig.ts (make_id, year, etc.)';
 comment on column public.ads.status is 'pending = awaiting admin; active = public; banned = rejected/hidden';
 comment on column public.ads.expires_at is 'Public visibility ends at this time (typically 30 days after approval).';
+comment on column public.ads.marked_sold_at is 'When the seller marked the item as sold (SOLD stamp on the listing).';
 
 -- ---------------------------------------------------------------------------
 -- Favorites

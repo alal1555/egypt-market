@@ -4,12 +4,19 @@ import Link from "next/link";
 import { CheckCircle, Gift, Tag } from "lucide-react";
 import { FREE_LISTINGS_PROMO } from "@/constants/adPricing";
 import { useTranslation } from "@/i18n/LocaleProvider";
-import { pricingAr } from "@/i18n/content/pricing.ar";
-import { pricingEn } from "@/i18n/content/pricing.en";
+import { pricingArLaunch, pricingArPaid } from "@/i18n/content/pricing.ar";
+import { pricingEnLaunch, pricingEnPaid } from "@/i18n/content/pricing.en";
 
 export default function PricingClient() {
   const { locale, t } = useTranslation();
-  const c = locale === "ar" ? pricingAr : pricingEn;
+  const c =
+    locale === "ar"
+      ? FREE_LISTINGS_PROMO
+        ? pricingArLaunch
+        : pricingArPaid
+      : FREE_LISTINGS_PROMO
+        ? pricingEnLaunch
+        : pricingEnPaid;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 md:py-12">
@@ -24,12 +31,16 @@ export default function PricingClient() {
         <p className="text-gray-600 max-w-2xl mx-auto">{c.intro}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {c.plans.map((plan) => (
+      <div
+        className={`grid grid-cols-1 gap-6 mb-10 ${c.plans.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-3"}`}
+      >
+        {c.plans.map((plan) => {
+          const highlighted = FREE_LISTINGS_PROMO ? plan.id === "launch" : plan.id === "standard";
+          return (
           <div
             key={plan.id}
             className={`relative rounded-3xl border p-6 flex flex-col ${
-              plan.id === "standard"
+              highlighted
                 ? "border-[#FF6321] bg-orange-50/50 shadow-md ring-1 ring-[#FF6321]/20"
                 : "border-gray-200 bg-white"
             }`}
@@ -40,7 +51,7 @@ export default function PricingClient() {
               </span>
             )}
             <div className="flex items-center gap-2 mb-3 mt-1">
-              {plan.id === "starter" ? (
+              {plan.id === "starter" || plan.id === "launch" ? (
                 <Gift size={20} className="text-[#FF6321]" />
               ) : plan.id === "welcome_balance" ? (
                 <Tag size={20} className="text-[#FF6321]" />
@@ -60,7 +71,8 @@ export default function PricingClient() {
               ))}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="rounded-3xl border border-gray-200 bg-white overflow-hidden mb-10">
