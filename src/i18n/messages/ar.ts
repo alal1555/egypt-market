@@ -23,6 +23,7 @@ export const ar = {
     searchListings: "بحث الإعلانات",
     postAnAd: "أضف إعلان",
     logIn: "تسجيل الدخول",
+    myProfile: "ملفي",
     adPricing: "انشر مجاناً",
     about: "من نحن",
     terms: "شروط الاستخدام",
@@ -69,6 +70,10 @@ export const ar = {
     resendConfirmEmail: "إعادة إرسال رسالة التأكيد",
     loginResendSent: "تم إرسال رسالة التأكيد. تحقق من بريدك (والبريد المزعج)، اضغط الرابط، ثم سجّل الدخول.",
     emailVerifiedLogin: "تم تأكيد البريد! يمكنك تسجيل الدخول الآن.",
+    alreadyLoggedIn: "أنت مسجّل الدخول بالفعل.",
+    alreadyLoggedInHint: "استخدم ملفك لإدارة الإعلانات وإعدادات الحساب.",
+    goToHome: "العودة للرئيسية",
+    goToProfile: "الذهاب إلى الملف",
     emailRateLimit:
       "تم تجاوز حد إرسال البريد الافتراضي في Supabase (التسجيل وإعادة الإرسال ونسيت كلمة المرور تحسب). انتظر نحو ساعة، أو فعّل SMTP مخصصاً من لوحة Supabase. يمكنك أيضاً تأكيد الحساب يدوياً من Authentication → Users.",
     processing: "جاري المعالجة...",

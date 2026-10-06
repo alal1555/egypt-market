@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import {
   getEmailConfirmRedirectUrl,
+  getSessionUser,
   isEmailNotConfirmedAuthError,
   isEmailRateLimitAuthError,
 } from "@/lib/auth-client";
@@ -25,8 +26,22 @@ function LoginForm() {
   const [loginHint, setLoginHint] = useState<string | null>(null);
   const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false);
   const [emailRateLimited, setEmailRateLimited] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    let active = true;
+    void getSessionUser().then((sessionUser) => {
+      if (!active) return;
+      setLoggedIn(Boolean(sessionUser));
+      setSessionReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     setIsSignUp(searchParams.get("mode") === "signup");
@@ -123,6 +138,40 @@ function LoginForm() {
       setResendingEmail(false);
     }
   };
+
+  if (!sessionReady) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <p className="text-gray-500 font-medium">{t("common.loading")}</p>
+      </main>
+    );
+  }
+
+  if (loggedIn) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-gray-100 text-center space-y-4">
+          <h1 className="text-2xl font-black text-gray-900">{t("auth.alreadyLoggedIn")}</h1>
+          <p className="text-sm text-gray-600">{t("auth.alreadyLoggedInHint")}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Link
+              href="/"
+              className="bg-[#FF6321] text-white font-bold px-5 py-2.5 rounded-xl hover:bg-[#e85a1e] transition-colors"
+            >
+              {t("auth.goToHome")}
+            </Link>
+            <Link
+              href="/profile"
+              prefetch={false}
+              className="border border-gray-200 text-gray-800 font-bold px-5 py-2.5 rounded-xl hover:border-[#FF6321] hover:text-[#FF6321] transition-colors"
+            >
+              {t("auth.goToProfile")}
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">

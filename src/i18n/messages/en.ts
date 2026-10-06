@@ -23,6 +23,7 @@ export const en = {
     searchListings: "Search listings",
     postAnAd: "Post an ad",
     logIn: "Log in",
+    myProfile: "My profile",
     adPricing: "Free posting",
     about: "About",
     terms: "Terms of use",
@@ -69,6 +70,10 @@ export const en = {
     resendConfirmEmail: "Resend confirmation email",
     loginResendSent: "Confirmation email sent. Check your inbox (and spam), click the link, then log in.",
     emailVerifiedLogin: "Email confirmed! You can log in now.",
+    alreadyLoggedIn: "You're already logged in.",
+    alreadyLoggedInHint: "Use your profile to manage ads and account settings.",
+    goToHome: "Go to home",
+    goToProfile: "Go to profile",
     emailRateLimit:
       "Too many confirmation emails were sent recently (sign up, resend, and forgot-password all count). Please wait about an hour, then try again. Check spam if you signed up earlier — the link may already be there.",
     processing: "Processing...",

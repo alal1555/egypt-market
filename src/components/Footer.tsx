@@ -5,9 +5,11 @@ import Image from "next/image";
 import { CATEGORY_CONFIG } from "@/constants/categoryConfig";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { localizedMainCategoryName } from "@/i18n/catalog";
+import { useAuthSession } from "@/hooks/useAuthSession";
 
 export default function Footer() {
   const { t, locale } = useTranslation();
+  const { user } = useAuthSession();
   const year = new Date().getFullYear();
 
   return (
@@ -73,9 +75,19 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="text-sm text-gray-600 hover:text-[#FF6321] transition-colors">
-                  {t("footer.logIn")}
-                </Link>
+                {user ? (
+                  <Link
+                    href="/profile"
+                    prefetch={false}
+                    className="text-sm text-gray-600 hover:text-[#FF6321] transition-colors"
+                  >
+                    {t("footer.myProfile")}
+                  </Link>
+                ) : (
+                  <Link href="/login" className="text-sm text-gray-600 hover:text-[#FF6321] transition-colors">
+                    {t("footer.logIn")}
+                  </Link>
+                )}
               </li>
               <li>
                 <Link href="/pricing" className="text-sm text-gray-600 hover:text-[#FF6321] transition-colors">
