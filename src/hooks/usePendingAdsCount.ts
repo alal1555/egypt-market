@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const POLL_MS = 60_000;
+const POLL_MS = 30_000;
 
-export function usePendingAdsCount(isAdmin: boolean): number {
+export function usePendingAdsCount(userRole: string | null): number {
+  const isAdmin = userRole === "admin" || userRole === "super";
   const [count, setCount] = useState(0);
   const pathname = usePathname();
 
@@ -38,6 +39,25 @@ export function usePendingAdsCount(isAdmin: boolean): number {
     const onChanged = () => void refresh();
     window.addEventListener("yaddii:pending-ads-changed", onChanged);
     return () => window.removeEventListener("yaddii:pending-ads-changed", onChanged);
+  }, [isAdmin, refresh]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const channel = supabase
+      .channel("admin-pending-ads-count")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ads" },
+        () => {
+          void refresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, [isAdmin, refresh]);
 
   return count;

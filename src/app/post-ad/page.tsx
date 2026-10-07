@@ -36,6 +36,7 @@ import {
 } from "@/constants/auction";
 import { mergeAuctionFields } from "@/lib/auction";
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
+import { notifyPendingAdsChanged } from "@/hooks/usePendingAdsCount";
 
 export default function PostAdPage() {
   const router = useRouter();
@@ -220,6 +221,7 @@ export default function PostAdPage() {
       }
 
       setUploading(false);
+      notifyPendingAdsChanged();
       alert(t("postAd.submitted"));
       router.replace("/my-ads");
       return;

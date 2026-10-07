@@ -13,7 +13,7 @@ export default function BottomNav() {
   const { t } = useTranslation();
   const { user, userRole } = useAuthSession();
   const isAdmin = userRole === "admin" || userRole === "super";
-  const pendingAdsCount = usePendingAdsCount(isAdmin);
+  const pendingAdsCount = usePendingAdsCount(userRole);
 
   // Helper function to highlight the active tab
   const isActive = (path: string) => pathname === path;

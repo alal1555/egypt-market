@@ -19,7 +19,7 @@ function NavbarContent() {
   const { t } = useTranslation();
   const { user, userRole, loggingOut, logout } = useAuthSession();
   const isAdmin = userRole === "admin" || userRole === "super";
-  const pendingAdsCount = usePendingAdsCount(isAdmin);
+  const pendingAdsCount = usePendingAdsCount(userRole);
 
   // Sync the search input with the URL 'q' parameter
   useEffect(() => {
@@ -44,7 +44,7 @@ function NavbarContent() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 border-b border-gray-100 bg-white z-50 w-full m-0">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 md:gap-4 px-3 md:px-4 h-14 md:h-16 overflow-hidden">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 md:gap-4 px-3 md:px-4 h-14 md:h-16 overflow-visible">
         
         {/* LOGO */}
         <Link
@@ -96,12 +96,17 @@ function NavbarContent() {
                       ? t("nav.pendingAdsBadge", { count: pendingAdsCount })
                       : undefined
                   }
-                  className={`relative font-bold px-3 py-1.5 rounded-xl transition text-xs flex items-center gap-1.5 ${
-                  userRole === "super" ? "text-amber-700 bg-amber-50 border border-amber-200" : "text-[#FF6321] bg-orange-50"
-                }`}>
-                  {userRole === "super" ? <Crown size={14} /> : <Shield size={14} />}
-                  <span>{userRole === "super" ? t("nav.supremeAdmin") : t("nav.adminPanel")}</span>
-                  <AdminPendingBadge count={pendingAdsCount} className="-top-2 -end-2" />
+                  className={`relative font-bold px-3 py-1.5 rounded-xl transition text-xs ${
+                    userRole === "super"
+                      ? "text-amber-700 bg-amber-50 border border-amber-200"
+                      : "text-[#FF6321] bg-orange-50"
+                  }`}
+                >
+                  <span className="relative inline-flex items-center gap-1.5 pe-1">
+                    {userRole === "super" ? <Crown size={14} /> : <Shield size={14} />}
+                    <span>{userRole === "super" ? t("nav.supremeAdmin") : t("nav.adminPanel")}</span>
+                    <AdminPendingBadge count={pendingAdsCount} className="-top-2.5 -end-0" />
+                  </span>
                 </Link>
               )}
 
@@ -148,6 +153,24 @@ function NavbarContent() {
         {/* MOBILE AUTH BUTTONS */}
         <div className="md:hidden flex items-center gap-2 shrink-0">
           <LanguageSwitcher compact />
+          {user && isAdmin && (
+            <Link
+              href="/admin/dashboard"
+              aria-label={
+                pendingAdsCount > 0
+                  ? t("nav.pendingAdsBadge", { count: pendingAdsCount })
+                  : t("nav.admin")
+              }
+              className={`relative p-2 rounded-xl border ${
+                userRole === "super"
+                  ? "text-amber-700 bg-amber-50 border-amber-200"
+                  : "text-[#FF6321] bg-orange-50 border-orange-100"
+              }`}
+            >
+              {userRole === "super" ? <Crown size={18} /> : <Shield size={18} />}
+              <AdminPendingBadge count={pendingAdsCount} className="-top-1 -end-1" />
+            </Link>
+          )}
           {user ? (
             <>
               <Link
