@@ -232,11 +232,14 @@ export default function ShareAdMenu({
         <>
           <button
             type="button"
-            className="fixed inset-0 z-40 cursor-default"
+            className="fixed inset-0 z-[60] cursor-default bg-black/40 md:bg-black/20"
             aria-label={t("shareAd.close")}
             onClick={() => setOpen(false)}
           />
-          <div className="absolute z-50 mt-2 w-64 rounded-2xl border border-gray-100 bg-white shadow-xl overflow-hidden end-0">
+          <div
+            role="menu"
+            className="fixed z-[70] inset-x-0 bottom-0 max-md:rounded-t-2xl max-md:border-t max-md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:absolute md:inset-x-auto md:bottom-auto md:end-0 md:top-full md:mt-2 md:w-64 md:rounded-2xl md:border md:pb-0 border-gray-100 bg-white shadow-xl overflow-hidden"
+          >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <span className="text-sm font-black text-gray-900">{t("shareAd.title")}</span>
               <button type="button" onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-gray-100">

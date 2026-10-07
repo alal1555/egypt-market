@@ -34,11 +34,12 @@ export const extractSpecs = (attributes: any) => {
     };
   }
 
-  if (attributes.bedrooms || attributes.area || attributes.furnished) {
+  if (attributes.bedrooms || attributes.area || attributes.furnished || attributes.floor) {
     return {
       bedrooms: attributes.bedrooms,
       bathrooms: attributes.bathrooms,
       area: attributes.area,
+      floor: attributes.floor,
       furnished: attributes.furnished,
       finishing: attributes.finishing,
       rental_period: attributes.rental_period,
