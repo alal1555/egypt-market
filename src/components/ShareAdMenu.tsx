@@ -21,8 +21,10 @@ import {
   generateQrDataUrl,
   getShareProductUrl,
   safeFilename,
+  dataUrlToBlob,
   shareOrCopyLink,
   shareOrDownloadFile,
+  shouldUseNativeFileShare,
   type ShareAdPayload,
   type ShareAdSpec,
 } from "@/lib/share-ad";
@@ -153,14 +155,32 @@ export default function ShareAdMenu({
     setBusy("link");
     setMessage(null);
     try {
-      const result = await shareOrCopyLink(payload.productUrl, ad.title);
-      setMessage(result === "shared" ? t("shareAd.linkShared") : t("shareAd.linkCopied"));
+      const readyPayload = await ensurePayload();
+      let imageFile: File | null = null;
+      if (readyPayload.imageDataUrl) {
+        const blob = dataUrlToBlob(readyPayload.imageDataUrl);
+        imageFile = new File([blob], `${filenameBase}.jpg`, {
+          type: blob.type || "image/jpeg",
+        });
+      }
+      const result = await shareOrCopyLink(readyPayload.productUrl, ad.title, { imageFile });
+      if (result === "sharedWithImage") {
+        setMessage(t("shareAd.linkSharedWithImage"));
+      } else if (result === "shared") {
+        setMessage(t("shareAd.linkShared"));
+      } else {
+        setMessage(
+          imageFile && shouldUseNativeFileShare()
+            ? t("shareAd.linkCopiedNoImage")
+            : t("shareAd.linkCopied"),
+        );
+      }
     } catch {
       setMessage(t("shareAd.error"));
     } finally {
       setBusy(null);
     }
-  }, [ad.title, payload.productUrl, t]);
+  }, [ad.title, ensurePayload, filenameBase, t]);
 
   const handleShareImage = useCallback(async () => {
     setBusy("image");

@@ -234,17 +234,46 @@ export async function shareOrDownloadFile(
   return false;
 }
 
-export async function shareOrCopyLink(url: string, title: string): Promise<"shared" | "copied"> {
+export type ShareLinkResult = "shared" | "sharedWithImage" | "copied";
+
+/** Mobile: native share with listing image when the browser allows url + files together. */
+export async function shareOrCopyLink(
+  url: string,
+  title: string,
+  options?: { imageFile?: File | null },
+): Promise<ShareLinkResult> {
+  const imageFile = options?.imageFile ?? null;
+  const caption = `${title}\n${url}`;
+
   if (typeof navigator !== "undefined" && navigator.share) {
-    try {
-      await navigator.share({ title, url });
-      return "shared";
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return "shared";
+    const candidates: ShareData[] = [];
+    if (imageFile) {
+      candidates.push({ title, text: caption, url, files: [imageFile] });
+      candidates.push({ title, text: caption, files: [imageFile] });
+      candidates.push({ files: [imageFile], text: caption });
+    }
+    candidates.push({ title, text: title, url });
+    candidates.push({ title, url });
+
+    for (const data of candidates) {
+      try {
+        if (navigator.canShare && !navigator.canShare(data)) continue;
+        await navigator.share(data);
+        return data.files?.length ? "sharedWithImage" : "shared";
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") {
+          return data.files?.length ? "sharedWithImage" : "shared";
+        }
+      }
     }
   }
-  await navigator.clipboard.writeText(url);
-  return "copied";
+
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(url);
+    return "copied";
+  }
+
+  throw new Error("share_unavailable");
 }
 
 export function safeFilename(title: string): string {
