@@ -2,6 +2,10 @@ const ABOUT_HERO_PNG = "/marketing/yaddii-about-banner.png";
 const ABOUT_HERO_WEBP = "/marketing/yaddii-about-banner.webp";
 const ABOUT_HERO_JPG = "/marketing/yaddii-about-banner.jpg";
 
+/** Matches processed hero (1536×857 from 1024×571 source). */
+const HERO_WIDTH = 1536;
+const HERO_HEIGHT = 856;
+
 export default function AboutHeroBanner() {
   return (
     <div className="max-w-3xl mx-auto px-4 pt-2 md:pt-4 pb-2">
@@ -13,10 +17,10 @@ export default function AboutHeroBanner() {
           <img
             src={ABOUT_HERO_JPG}
             alt=""
-            width={1536}
-            height={777}
+            width={HERO_WIDTH}
+            height={HERO_HEIGHT}
             decoding="async"
-            className="w-full h-auto max-h-56 sm:max-h-64 md:max-h-80 object-cover object-[center_42%]"
+            className="w-full h-auto object-contain bg-[#1a120e]"
             sizes="(max-width: 768px) 100vw, 768px"
           />
         </picture>
