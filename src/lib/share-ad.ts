@@ -7,6 +7,34 @@ export const YADDII_BRAND = "#FF6321";
 export const YADDII_PUBLIC_ORIGIN = "https://yaddii.com";
 export const YADDII_PUBLIC_HOST = "yaddii.com";
 
+const ARABIC_SCRIPT_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+
+export function hasArabicScript(text: string): boolean {
+  return ARABIC_SCRIPT_RE.test(text);
+}
+
+/** Use Arabic typography when UI is Arabic or ad copy contains Arabic script. */
+export function shareUsesArabicTypography(data: {
+  title: string;
+  description: string;
+  location: string;
+  specs: ShareAdSpec[];
+  locale: string;
+}): boolean {
+  if (data.locale === "ar") return true;
+  const blob = [
+    data.title,
+    data.description,
+    data.location,
+    ...data.specs.map((s) => `${s.label} ${s.value}`),
+  ].join(" ");
+  return hasArabicScript(blob);
+}
+
+export const SHARE_FLYER_FONT_AR =
+  'var(--font-almarai), "Almarai", Arial, Helvetica, sans-serif';
+export const SHARE_FLYER_FONT_EN = 'Arial, Helvetica, sans-serif';
+
 function isLocalOrigin(origin: string): boolean {
   try {
     const { hostname } = new URL(origin);

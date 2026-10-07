@@ -172,6 +172,15 @@ export default function ShareAdMenu({
       });
       const node = flyerRef.current;
       if (!node) throw new Error("flyer_missing");
+      if (typeof document !== "undefined" && document.fonts?.ready) {
+        try {
+          await document.fonts.load('700 34px "Almarai"');
+          await document.fonts.load('400 17px "Almarai"');
+        } catch {
+          /* Almarai may already be loaded via next/font */
+        }
+        await document.fonts.ready;
+      }
       const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true });
       const file = new File([await (await fetch(dataUrl)).blob()], `${filenameBase}.png`, {
         type: "image/png",

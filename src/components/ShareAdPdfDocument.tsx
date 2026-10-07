@@ -10,31 +10,36 @@ import {
   View,
 } from "@react-pdf/renderer";
 import type { ShareAdPayload } from "@/lib/share-ad";
-import { YADDII_BRAND } from "@/lib/share-ad";
+import { shareUsesArabicTypography, YADDII_BRAND } from "@/lib/share-ad";
 
+/** react-pdf renders Arabic poorly with WOFF/Helvetica — register TTF and use on every page. */
 Font.register({
   family: "Almarai",
   fonts: [
     {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/almarai@5.0.13/files/almarai-arabic-400-normal.woff",
+      src: "https://cdn.jsdelivr.net/npm/@fontsource/almarai@5.0.13/files/almarai-arabic-400-normal.ttf",
       fontWeight: 400,
     },
     {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/almarai@5.0.13/files/almarai-arabic-700-normal.woff",
+      src: "https://cdn.jsdelivr.net/npm/@fontsource/almarai@5.0.13/files/almarai-arabic-700-normal.ttf",
       fontWeight: 700,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/npm/@fontsource/almarai@5.0.13/files/almarai-arabic-800-normal.ttf",
+      fontWeight: 800,
     },
   ],
 });
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: "Helvetica",
-    fontSize: 11,
+    fontFamily: "Almarai",
+    fontSize: 13,
     color: "#111827",
     backgroundColor: "#ffffff",
   },
-  pageAr: {
-    fontFamily: "Almarai",
+  pageRtl: {
+    direction: "rtl",
   },
   header: {
     backgroundColor: YADDII_BRAND,
@@ -46,7 +51,7 @@ const styles = StyleSheet.create({
   },
   headerHost: {
     color: "#ffffff",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 700,
   },
   logoWrap: {
@@ -76,7 +81,7 @@ const styles = StyleSheet.create({
     left: 14,
     backgroundColor: YADDII_BRAND,
     color: "#ffffff",
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -90,57 +95,64 @@ const styles = StyleSheet.create({
   },
   category: {
     color: YADDII_BRAND,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
     textTransform: "uppercase",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   title: {
-    fontSize: 22,
-    fontWeight: 700,
-    marginBottom: 10,
-    lineHeight: 1.3,
+    fontSize: 28,
+    fontWeight: 800,
+    marginBottom: 12,
+    lineHeight: 1.35,
   },
   price: {
-    fontSize: 26,
-    fontWeight: 700,
+    fontSize: 32,
+    fontWeight: 800,
     color: YADDII_BRAND,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   priceHint: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#6b7280",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   location: {
-    fontSize: 12,
+    fontSize: 15,
     color: "#4b5563",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   specsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   specChip: {
     backgroundColor: "#f9fafb",
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    fontSize: 9,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginRight: 6,
+    marginBottom: 6,
+    minHeight: 36,
+    justifyContent: "center",
+  },
+  specChipText: {
+    fontSize: 12,
+    fontWeight: 700,
     color: "#374151",
+    lineHeight: 1.35,
   },
   description: {
-    fontSize: 11,
-    lineHeight: 1.5,
+    fontSize: 14,
+    lineHeight: 1.55,
     color: "#4b5563",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   contact: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: 700,
     marginBottom: 8,
   },
@@ -158,23 +170,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tagline: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 700,
     marginBottom: 4,
+    lineHeight: 1.4,
   },
   footerLine: {
-    fontSize: 10,
+    fontSize: 12,
     color: YADDII_BRAND,
     fontWeight: 700,
     marginBottom: 4,
   },
   productUrl: {
-    fontSize: 8,
+    fontSize: 9,
     color: "#9ca3af",
   },
   qr: {
-    width: 72,
-    height: 72,
+    width: 80,
+    height: 80,
   },
 });
 
@@ -184,13 +197,19 @@ type Props = {
 };
 
 export default function ShareAdPdfDocument({ data, locale }: Props) {
-  const isAr = locale === "ar";
+  const useAr = shareUsesArabicTypography({
+    locale,
+    title: data.title,
+    description: data.description,
+    location: data.location,
+    specs: data.specs,
+  });
   const desc =
     data.description.length > 400 ? `${data.description.slice(0, 397).trim()}…` : data.description;
 
   return (
     <Document title={data.title} author="Yaddii Marketplace">
-      <Page size="A4" style={[styles.page, isAr ? styles.pageAr : {}]}>
+      <Page size="A4" style={[styles.page, useAr ? styles.pageRtl : {}]}>
         <View style={styles.header}>
           <View style={styles.logoWrap}>
             {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image */}
@@ -205,7 +224,7 @@ export default function ShareAdPdfDocument({ data, locale }: Props) {
             <Image src={data.imageDataUrl ?? data.imageUrl!} style={styles.heroImage} />
           ) : null}
           {data.isAuction && (
-            <Text style={styles.auctionBadge}>{isAr ? "مزاد" : "Auction"}</Text>
+            <Text style={styles.auctionBadge}>{useAr ? "مزاد" : "Auction"}</Text>
           )}
         </View>
 
@@ -219,9 +238,11 @@ export default function ShareAdPdfDocument({ data, locale }: Props) {
           {data.specs.length > 0 && (
             <View style={styles.specsRow}>
               {data.specs.map((spec) => (
-                <Text key={`${spec.label}-${spec.value}`} style={styles.specChip}>
-                  {spec.label}: {spec.value}
-                </Text>
+                <View key={`${spec.label}-${spec.value}`} style={styles.specChip}>
+                  <Text style={styles.specChipText}>
+                    {spec.label}: {spec.value}
+                  </Text>
+                </View>
               ))}
             </View>
           )}
@@ -229,7 +250,7 @@ export default function ShareAdPdfDocument({ data, locale }: Props) {
           {desc ? <Text style={styles.description}>{desc}</Text> : null}
           {data.sellerPhone ? (
             <Text style={styles.contact}>
-              {isAr ? "للتواصل:" : "Contact:"} {data.sellerPhone}
+              {useAr ? "للتواصل:" : "Contact:"} {data.sellerPhone}
             </Text>
           ) : null}
         </View>
