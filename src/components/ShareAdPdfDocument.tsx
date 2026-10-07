@@ -11,9 +11,6 @@ const styles = StyleSheet.create({
     color: "#111827",
     backgroundColor: "#ffffff",
   },
-  pageRtl: {
-    direction: "rtl",
-  },
   header: {
     backgroundColor: YADDII_BRAND,
     paddingHorizontal: 28,
@@ -65,6 +62,17 @@ const styles = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 12,
     flexGrow: 1,
+  },
+  bodyRtl: {
+    direction: "rtl",
+    textAlign: "right",
+  },
+  specsRowRtl: {
+    flexDirection: "row-reverse",
+  },
+  specChipRtl: {
+    marginRight: 0,
+    marginLeft: 6,
   },
   category: {
     color: YADDII_BRAND,
@@ -179,10 +187,11 @@ export default function ShareAdPdfDocument({ data, locale }: Props) {
   });
   const desc =
     data.description.length > 400 ? `${data.description.slice(0, 397).trim()}…` : data.description;
+  const bodyRtl = locale === "ar";
 
   return (
     <Document title={data.title} author="Yaddii Marketplace">
-      <Page size="A4" style={[styles.page, useAr ? styles.pageRtl : {}]}>
+      <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View style={styles.logoWrap}>
             {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image */}
@@ -201,7 +210,7 @@ export default function ShareAdPdfDocument({ data, locale }: Props) {
           )}
         </View>
 
-        <View style={styles.body}>
+        <View style={[styles.body, bodyRtl ? styles.bodyRtl : {}]}>
           <Text style={styles.category}>{data.categoryLabel}</Text>
           <Text style={styles.title}>{data.title}</Text>
           <Text style={styles.price}>{data.priceDisplay}</Text>
@@ -209,9 +218,12 @@ export default function ShareAdPdfDocument({ data, locale }: Props) {
           <Text style={styles.location}>{data.location}</Text>
 
           {data.specs.length > 0 && (
-            <View style={styles.specsRow}>
+            <View style={[styles.specsRow, bodyRtl ? styles.specsRowRtl : {}]}>
               {data.specs.map((spec) => (
-                <View key={`${spec.label}-${spec.value}`} style={styles.specChip}>
+                <View
+                  key={`${spec.label}-${spec.value}`}
+                  style={[styles.specChip, bodyRtl ? styles.specChipRtl : {}]}
+                >
                   <Text style={styles.specChipText}>
                     {spec.label}: {spec.value}
                   </Text>
