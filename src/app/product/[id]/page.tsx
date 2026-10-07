@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Phone, MessageCircle, MapPin } from "lucide-react";
+import AdViewCount from "@/components/AdViewCount";
+import { recordAdView } from "@/lib/ad-views";
 import AdCard from "@/components/AdCard";
 import AuctionPanel from "@/components/AuctionPanel";
 import ShareAdMenu from "@/components/ShareAdMenu";
@@ -71,6 +73,13 @@ export default function ProductPage() {
 
     fetchFullData();
   }, [params.id]);
+
+  useEffect(() => {
+    if (!ad?.id) return;
+    void recordAdView(ad.id).then((next) => {
+      if (next != null) patchAd({ view_count: next });
+    });
+  }, [ad?.id, patchAd]);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -186,8 +195,11 @@ export default function ProductPage() {
                   </p>
                 )}
 
-                <div className="flex items-center gap-2 text-gray-500 mb-6">
-                  <MapPin size={18} /> {ad.location}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-500 mb-6 text-sm">
+                  <span className="inline-flex items-center gap-2">
+                    <MapPin size={18} /> {ad.location}
+                  </span>
+                  <AdViewCount count={ad.view_count} iconSize={16} className="text-gray-600 font-semibold" />
                 </div>
 
                 <div className="space-y-3">
@@ -241,8 +253,11 @@ export default function ProductPage() {
                     {localizedSubCategoryName(ad.category_slug, locale)}
                   </p>
                 )}
-                <div className="flex items-center gap-2 text-gray-500 mb-4">
-                  <MapPin size={18} /> {ad.location}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-500 mb-4 text-sm">
+                  <span className="inline-flex items-center gap-2">
+                    <MapPin size={18} /> {ad.location}
+                  </span>
+                  <AdViewCount count={ad.view_count} iconSize={16} className="text-gray-600 font-semibold" />
                 </div>
                 {showContact && phoneLink && (
                   <div className="space-y-3 border-t pt-4">

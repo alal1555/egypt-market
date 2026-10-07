@@ -19,6 +19,7 @@ import {
   localizedAttributeLabel,
 } from "@/i18n/catalog";
 import SoldStampOverlay from "@/components/SoldStampOverlay";
+import AdViewCount from "@/components/AdViewCount";
 
 interface AdProps extends AuctionAdFields {
   id: string;
@@ -36,12 +37,14 @@ interface AdProps extends AuctionAdFields {
   expires_at?: string | null;
   marked_sold_at?: string | null;
   showStatus?: boolean;
+  view_count?: number | null;
 }
 
 export default function AdCard({ 
   id, title, price, location, imageUrl, specs = {}, postedDate,
   makeName, modelName, currentUserId: propUserId, status = "active", expires_at, marked_sold_at,
   showStatus = false,
+  view_count,
   category = "",
   listing_type,
   auction_current_bid,
@@ -202,9 +205,12 @@ export default function AdCard({
           </div>
           
           {/* Footer container with mt-auto */}
-          <div className="flex justify-between items-center text-gray-500 text-xs mt-4">
-            <span className="flex items-center gap-1"><MapPin size={12} /> {location}</span>
-            {postedDate && <span>{postedDate}</span>}
+          <div className="flex justify-between items-center text-gray-500 text-xs mt-4 gap-2">
+            <span className="flex items-center gap-1 min-w-0 truncate"><MapPin size={12} className="shrink-0" /> {location}</span>
+            <span className="flex items-center gap-2 shrink-0">
+              <AdViewCount count={view_count} />
+              {postedDate ? <span>{postedDate}</span> : null}
+            </span>
           </div>
         </div>
       </div>

@@ -113,7 +113,7 @@ No API routes except **wallet top-up** (`/api/wallet/top-up/*` for Paymob). Sche
 Full SQL + RLS: see [`supabase/README.md`](supabase/README.md)
 
 ### `ads`
-`id`, `user_id`, `title`, `price`, `location`, `description`, `category_slug`, `attributes` (JSONB), `images` (text[]), `seller_phone`, `status` (`pending` | `active` | `banned`), `created_at`
+`id`, `user_id`, `title`, `price`, `location`, `description`, `category_slug`, `attributes` (JSONB), `images` (text[]), `seller_phone`, `status` (`pending` | `active` | `banned`), `created_at`, `view_count` (detail-page views via `increment_ad_view`)
 
 ### `profiles`
 `id` (FK auth.users), `role` (`user` | `admin` | `super`)

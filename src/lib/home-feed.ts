@@ -21,6 +21,7 @@ export type HomeAd = {
   auction_ends_at?: string | null;
   auction_status?: string | null;
   marked_sold_at?: string | null;
+  view_count?: number | null;
 };
 
 export type HomeFeedData = {

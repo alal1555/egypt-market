@@ -163,6 +163,7 @@ function HomeContent() {
                 auction_ends_at={ad.auction_ends_at}
                 auction_status={ad.auction_status}
                 marked_sold_at={ad.marked_sold_at}
+                view_count={ad.view_count}
               />
             ))}
             </div>

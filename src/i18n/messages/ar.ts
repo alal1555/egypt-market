@@ -134,6 +134,9 @@ export const ar = {
   listing: {
     soldStamp: "مُباع",
   },
+  adViews: {
+    aria: "{count} مشاهدة",
+  },
   adStatus: {
     pending: "قيد المراجعة",
     live: "نشط",

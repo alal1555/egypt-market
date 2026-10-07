@@ -133,6 +133,9 @@ export const en = {
   listing: {
     soldStamp: "SOLD",
   },
+  adViews: {
+    aria: "{count} views",
+  },
   adStatus: {
     pending: "Pending",
     live: "Live",
