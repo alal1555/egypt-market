@@ -9,6 +9,7 @@ export const ar = {
     postAd: "أضف إعلان",
     login: "تسجيل الدخول",
     logout: "خروج",
+    signUp: "إنشاء حساب",
     startSelling: "ابدأ البيع",
     adminPanel: "لوحة الإدارة",
     supremeAdmin: "المدير الأعلى",

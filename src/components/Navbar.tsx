@@ -144,7 +144,7 @@ function NavbarContent() {
                 {t("nav.login")}
               </Link>
               <Link href="/signup" className="rounded-xl bg-[#FF6321] px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#e85a1e] transition-all">
-                {t("nav.startSelling")}
+                {t("nav.signUp")}
               </Link>
             </div>
           )}
@@ -189,12 +189,20 @@ function NavbarContent() {
               </button>
             </>
           ) : (
-            <Link 
-              href="/login"
-              className="text-xs font-bold text-white bg-[#FF6321] px-4 py-1.5 rounded-xl shadow-sm hover:bg-[#e85a1e]"
-            >
-              Login
-            </Link>
+            <>
+              <Link
+                href="/login"
+                className="text-xs font-bold text-gray-600 border border-gray-200 px-3 py-1.5 rounded-xl bg-white hover:text-[#FF6321] transition-colors"
+              >
+                {t("nav.login")}
+              </Link>
+              <Link
+                href="/signup"
+                className="text-xs font-bold text-white bg-[#FF6321] px-3 py-1.5 rounded-xl shadow-sm hover:bg-[#e85a1e] transition-colors whitespace-nowrap"
+              >
+                {t("nav.signUp")}
+              </Link>
+            </>
           )}
         </div>
       </div>

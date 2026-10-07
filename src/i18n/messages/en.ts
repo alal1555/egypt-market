@@ -9,6 +9,7 @@ export const en = {
     postAd: "Post Ad",
     login: "Login",
     logout: "Logout",
+    signUp: "Sign Up",
     startSelling: "Start Selling",
     adminPanel: "Admin Panel",
     supremeAdmin: "Supreme Admin",
