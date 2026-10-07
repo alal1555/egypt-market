@@ -21,7 +21,6 @@ import {
   generateQrDataUrl,
   getShareProductUrl,
   safeFilename,
-  dataUrlToBlob,
   shareOrCopyLink,
   shareOrDownloadFile,
   shouldUseNativeFileShare,
@@ -151,42 +150,8 @@ export default function ShareAdMenu({
     return { ...base, footerLine: t("shareAd.footerLine", { site: base.siteHost }) };
   }, [ad, imageDataUrl, locale, priceHint, qrDataUrl, specs, t]);
 
-  const handleCopyLink = useCallback(async () => {
-    setBusy("link");
-    setMessage(null);
-    try {
-      const readyPayload = await ensurePayload();
-      let imageFile: File | null = null;
-      if (readyPayload.imageDataUrl) {
-        const blob = dataUrlToBlob(readyPayload.imageDataUrl);
-        imageFile = new File([blob], `${filenameBase}.jpg`, {
-          type: blob.type || "image/jpeg",
-        });
-      }
-      const result = await shareOrCopyLink(readyPayload.productUrl, ad.title, { imageFile });
-      if (result === "sharedWithImage") {
-        setMessage(t("shareAd.linkSharedWithImage"));
-      } else if (result === "shared") {
-        setMessage(t("shareAd.linkShared"));
-      } else {
-        setMessage(
-          imageFile && shouldUseNativeFileShare()
-            ? t("shareAd.linkCopiedNoImage")
-            : t("shareAd.linkCopied"),
-        );
-      }
-    } catch {
-      setMessage(t("shareAd.error"));
-    } finally {
-      setBusy(null);
-    }
-  }, [ad.title, ensurePayload, filenameBase, t]);
-
-  const handleShareImage = useCallback(async () => {
-    setBusy("image");
-    setMessage(null);
-    try {
-      const readyPayload = await ensurePayload();
+  const renderBrandedFlyerPng = useCallback(
+    async (readyPayload: ShareAdPayload): Promise<{ file: File; dataUrl: string }> => {
       setExportPayload(readyPayload);
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
@@ -206,6 +171,54 @@ export default function ShareAdMenu({
       const file = new File([await (await fetch(dataUrl)).blob()], `${filenameBase}.png`, {
         type: "image/png",
       });
+      return { file, dataUrl };
+    },
+    [filenameBase],
+  );
+
+  const handleCopyLink = useCallback(async () => {
+    setBusy("link");
+    setMessage(null);
+    try {
+      const readyPayload = await ensurePayload();
+      let imageFile: File | null = null;
+      try {
+        const { file } = await renderBrandedFlyerPng(readyPayload);
+        imageFile = file;
+      } finally {
+        setExportPayload(null);
+      }
+      const result = await shareOrCopyLink(readyPayload.productUrl, ad.title, { imageFile });
+      if (result === "sharedWithImage") {
+        setMessage(t("shareAd.linkSharedWithImage"));
+      } else if (result === "shared") {
+        setMessage(t("shareAd.linkShared"));
+      } else {
+        setMessage(
+          imageFile && shouldUseNativeFileShare()
+            ? t("shareAd.linkCopiedNoImage")
+            : t("shareAd.linkCopied"),
+        );
+      }
+    } catch {
+      setMessage(t("shareAd.error"));
+    } finally {
+      setBusy(null);
+    }
+  }, [ad.title, ensurePayload, renderBrandedFlyerPng, t]);
+
+  const handleShareImage = useCallback(async () => {
+    setBusy("image");
+    setMessage(null);
+    try {
+      const readyPayload = await ensurePayload();
+      let file: File;
+      let dataUrl: string;
+      try {
+        ({ file, dataUrl } = await renderBrandedFlyerPng(readyPayload));
+      } finally {
+        setExportPayload(null);
+      }
       await shareOrDownloadFile(file, ad.title, async () => {
         await downloadDataUrl(dataUrl, `${filenameBase}.png`);
       });
@@ -213,10 +226,9 @@ export default function ShareAdMenu({
     } catch {
       setMessage(t("shareAd.error"));
     } finally {
-      setExportPayload(null);
       setBusy(null);
     }
-  }, [ad.title, ensurePayload, filenameBase, t]);
+  }, [ad.title, ensurePayload, filenameBase, renderBrandedFlyerPng, t]);
 
   const handleSharePdf = useCallback(async () => {
     setBusy("pdf");
