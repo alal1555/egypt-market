@@ -132,47 +132,62 @@ export default function EditAdPage({ params }: EditAdProps) {
         </p>
       )}
       <form onSubmit={handleUpdate} className="space-y-6">
-        <input
-          className="w-full px-4 py-3 border rounded-xl"
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          placeholder={t("editAd.titlePlaceholder")}
-          required
-        />
-
-        <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1">{t("editAd.titleLabel")}</label>
           <input
-            className="px-4 py-3 border rounded-xl"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            placeholder={t("editAd.pricePlaceholder")}
-            required
-          />
-          <input
-            className="px-4 py-3 border rounded-xl"
-            value={formData.location}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            placeholder={t("editAd.locationPlaceholder")}
+            className="w-full px-4 py-3 border rounded-xl"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            placeholder={t("editAd.titlePlaceholder")}
             required
           />
         </div>
 
-        <textarea
-          className="w-full px-4 py-3 border rounded-xl"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder={t("editAd.descriptionPlaceholder")}
-          rows={4}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">{t("editAd.priceLabel")}</label>
+            <input
+              className="w-full px-4 py-3 border rounded-xl"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              placeholder={t("editAd.pricePlaceholder")}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">{t("editAd.locationLabel")}</label>
+            <input
+              className="w-full px-4 py-3 border rounded-xl"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              placeholder={t("editAd.locationPlaceholder")}
+              required
+            />
+          </div>
+        </div>
 
-        <input
-          type="tel"
-          className="w-full px-4 py-3 border rounded-xl"
-          value={formData.seller_phone}
-          onChange={(e) => setFormData({ ...formData, seller_phone: e.target.value })}
-          placeholder={t("editAd.phonePlaceholder")}
-          required
-        />
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1">{t("editAd.descriptionLabel")}</label>
+          <textarea
+            className="w-full px-4 py-3 border rounded-xl"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder={t("editAd.descriptionPlaceholder")}
+            rows={4}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1">{t("editAd.contactPhone")}</label>
+          <input
+            type="tel"
+            className="w-full px-4 py-3 border rounded-xl"
+            value={formData.seller_phone}
+            onChange={(e) => setFormData({ ...formData, seller_phone: e.target.value })}
+            placeholder={t("editAd.phonePlaceholder")}
+            required
+          />
+        </div>
 
         <div className="p-4 bg-gray-50 rounded-xl border">
           <h3 className="font-bold text-gray-700 mb-4">{t("editAd.specifications")}</h3>

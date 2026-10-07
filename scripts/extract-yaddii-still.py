@@ -1,35 +1,78 @@
-from PIL import Image, ImageEnhance
+"""Build About/marketing stills from a source frame (JPEG/PNG). Upscale for web hero."""
+
+from __future__ import annotations
+
+import argparse
 import os
+from pathlib import Path
 
-src = r"C:\Users\alal1\.cursor\projects\c-Users-alal1-Desktop-egypt-market-public\assets\c__Users_alal1_AppData_Roaming_Cursor_User_workspaceStorage_0ce5efb3015f89bccf5ad09308cd3190_images_Gemini_Generated_Gif_okcu91okcu91okcu-bc3fb8f0-c284-4ac1-8c4e-e85dc25d02f1.jpg"
-out_dir = r"c:\Users\alal1\Desktop\egypt-market\public\marketing"
-os.makedirs(out_dir, exist_ok=True)
+from PIL import Image, ImageEnhance
 
-im = Image.open(src).convert("RGB")
-w, h = im.size
-print("size", w, h)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_OUT = REPO_ROOT / "public" / "marketing"
+HERO_WIDTH = 1920
 
-still = im.copy()
-still = ImageEnhance.Contrast(still).enhance(1.05)
-still = ImageEnhance.Sharpness(still).enhance(1.15)
-still.save(os.path.join(out_dir, "yaddii-hero-still.jpg"), quality=92, optimize=True)
 
-box = (int(w * 0.08), int(h * 0.22), int(w * 0.92), int(h * 0.72))
-sign = im.crop(box)
-sign = ImageEnhance.Sharpness(sign).enhance(1.2)
-sign.save(os.path.join(out_dir, "yaddii-3d-sign-crop.jpg"), quality=92, optimize=True)
+def upscale(img: Image.Image, target_width: int) -> Image.Image:
+    if img.width >= target_width:
+        return img
+    scale = target_width / img.width
+    size = (target_width, int(img.height * scale))
+    out = img.resize(size, Image.Resampling.LANCZOS)
+    out = ImageEnhance.Sharpness(out).enhance(1.08)
+    out = ImageEnhance.Contrast(out).enhance(1.02)
+    return out
 
-# Sign row only (icon + Yaddii wordmark; minimal face)
-box2 = (int(w * 0.06), int(h * 0.31), int(w * 0.94), int(h * 0.57))
-logo = im.crop(box2)
-pad = 20
-logo_padded = Image.new("RGB", (logo.width + pad * 2, logo.height + pad * 2), (249, 250, 251))
-logo_padded.paste(logo, (pad, pad))
-logo_padded.save(os.path.join(out_dir, "yaddii-3d-sign-on-white.jpg"), quality=92, optimize=True)
 
-# Wide banner crop for About hero (16:9 feel, no extra sharpening on background)
-banner = im.crop((0, int(h * 0.05), w, int(h * 0.95)))
-banner = ImageEnhance.Contrast(banner).enhance(1.03)
-banner.save(os.path.join(out_dir, "yaddii-about-banner.jpg"), quality=90, optimize=True)
+def save_hero_pair(img: Image.Image, out_dir: Path, stem: str) -> None:
+    jpg = out_dir / f"{stem}.jpg"
+    webp = out_dir / f"{stem}.webp"
+    img.save(jpg, quality=95, optimize=True, progressive=True)
+    img.save(webp, quality=92, method=6)
+    print("wrote", jpg.name, webp.name, img.size)
 
-print("saved to", out_dir)
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "source",
+        nargs="?",
+        default=str(DEFAULT_OUT / "source-frame.jpg"),
+        help="Source still (place HD export as public/marketing/source-frame.jpg)",
+    )
+    parser.add_argument("--out", default=str(DEFAULT_OUT))
+    args = parser.parse_args()
+
+    src = Path(args.source)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if not src.is_file():
+        raise SystemExit(f"Source not found: {src}")
+
+    im = Image.open(src).convert("RGB")
+    w, h = im.size
+    print("source", im.size)
+
+    banner = im.crop((0, int(h * 0.05), w, int(h * 0.95)))
+    save_hero_pair(upscale(banner, HERO_WIDTH), out_dir, "yaddii-about-banner")
+
+    still = upscale(im, HERO_WIDTH)
+    save_hero_pair(still, out_dir, "yaddii-hero-still")
+
+    box = (int(w * 0.08), int(h * 0.22), int(w * 0.92), int(h * 0.72))
+    sign = ImageEnhance.Sharpness(im.crop(box)).enhance(1.15)
+    sign.save(out_dir / "yaddii-3d-sign-crop.jpg", quality=92, optimize=True)
+
+    box2 = (int(w * 0.06), int(h * 0.31), int(w * 0.94), int(h * 0.57))
+    logo = im.crop(box2)
+    pad = 20
+    logo_padded = Image.new("RGB", (logo.width + pad * 2, logo.height + pad * 2), (249, 250, 251))
+    logo_padded.paste(logo, (pad, pad))
+    logo_padded.save(out_dir / "yaddii-3d-sign-on-white.jpg", quality=92, optimize=True)
+
+    print("done ->", out_dir)
+
+
+if __name__ == "__main__":
+    main()
