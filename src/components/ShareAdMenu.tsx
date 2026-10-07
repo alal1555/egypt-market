@@ -26,6 +26,7 @@ import {
   type ShareAdPayload,
   type ShareAdSpec,
 } from "@/lib/share-ad";
+import { ensureSharePdfFonts } from "@/lib/share-pdf-fonts";
 
 export type ShareAdInput = {
   id: string;
@@ -202,6 +203,7 @@ export default function ShareAdMenu({
     setMessage(null);
     try {
       const readyPayload = await ensurePayload();
+      await ensureSharePdfFonts();
       const [{ pdf }, { default: ShareAdPdfDocument }] = await Promise.all([
         import("@react-pdf/renderer"),
         import("@/components/ShareAdPdfDocument"),

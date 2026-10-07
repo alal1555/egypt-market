@@ -1,35 +1,8 @@
 "use client";
 
-import {
-  Document,
-  Font,
-  Image,
-  Page,
-  StyleSheet,
-  Text,
-  View,
-} from "@react-pdf/renderer";
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ShareAdPayload } from "@/lib/share-ad";
 import { shareUsesArabicTypography, YADDII_BRAND } from "@/lib/share-ad";
-
-/** react-pdf renders Arabic poorly with WOFF/Helvetica — register TTF and use on every page. */
-Font.register({
-  family: "Almarai",
-  fonts: [
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/almarai@5.0.13/files/almarai-arabic-400-normal.ttf",
-      fontWeight: 400,
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/almarai@5.0.13/files/almarai-arabic-700-normal.ttf",
-      fontWeight: 700,
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/almarai@5.0.13/files/almarai-arabic-800-normal.ttf",
-      fontWeight: 800,
-    },
-  ],
-});
 
 const styles = StyleSheet.create({
   page: {
