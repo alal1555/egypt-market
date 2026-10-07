@@ -13,10 +13,10 @@ export default function AboutHeroBanner() {
           <img
             src={ABOUT_HERO_JPG}
             alt=""
-            width={1280}
-            height={648}
+            width={1536}
+            height={777}
             decoding="async"
-            className="w-full h-auto max-h-52 sm:max-h-60 md:max-h-72 object-cover object-[center_42%]"
+            className="w-full h-auto max-h-56 sm:max-h-64 md:max-h-80 object-cover object-[center_42%]"
             sizes="(max-width: 768px) 100vw, 768px"
           />
         </picture>

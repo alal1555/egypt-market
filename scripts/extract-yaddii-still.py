@@ -17,23 +17,27 @@ FALLBACK_SOURCE = (
     / "assets"
     / "c__Users_alal1_AppData_Roaming_Cursor_User_workspaceStorage_0ce5efb3015f89bccf5ad09308cd3190_images_Gemini_Generated_Gif_okcu91okcu91okcu-bc3fb8f0-c284-4ac1-8c4e-e85dc25d02f1.jpg"
 )
-HERO_WIDTH = 1280
+HERO_WIDTH = 1536
 
 
-def soften_ai_grain(img: Image.Image) -> Image.Image:
-    """Reduce speckle / dark JPEG dots from low-res AI frames before upscale."""
-    smooth = img.filter(ImageFilter.GaussianBlur(radius=0.55))
-    smooth = smooth.filter(ImageFilter.MedianFilter(size=3))
-    return ImageEnhance.Sharpness(smooth).enhance(1.02)
+def reduce_grain(img: Image.Image) -> Image.Image:
+    """Light speckle cleanup — avoid heavy blur (that made the hero look soft)."""
+    return img.filter(ImageFilter.MedianFilter(size=3))
+
+
+def finish_hero(img: Image.Image) -> Image.Image:
+    """Sharpen edges after upscale; threshold skips flat/noisy dark regions."""
+    sharp = img.filter(ImageFilter.UnsharpMask(radius=1.1, percent=118, threshold=4))
+    return ImageEnhance.Contrast(sharp).enhance(1.015)
 
 
 def upscale(img: Image.Image, target_width: int) -> Image.Image:
-    img = soften_ai_grain(img)
-    if img.width >= target_width:
-        return img
-    scale = target_width / img.width
-    size = (target_width, int(img.height * scale))
-    return img.resize(size, Image.Resampling.LANCZOS)
+    img = reduce_grain(img)
+    if img.width < target_width:
+        scale = target_width / img.width
+        size = (target_width, int(img.height * scale))
+        img = img.resize(size, Image.Resampling.LANCZOS)
+    return finish_hero(img)
 
 
 def save_hero_pair(img: Image.Image, out_dir: Path, stem: str) -> None:
@@ -81,7 +85,7 @@ def main() -> None:
     save_hero_pair(still, out_dir, "yaddii-hero-still")
 
     box = (int(w * 0.08), int(h * 0.22), int(w * 0.92), int(h * 0.72))
-    sign = soften_ai_grain(im.crop(box))
+    sign = reduce_grain(im.crop(box))
     sign.save(out_dir / "yaddii-3d-sign-crop.jpg", quality=95, optimize=True, subsampling=0)
 
     box2 = (int(w * 0.06), int(h * 0.31), int(w * 0.94), int(h * 0.57))
