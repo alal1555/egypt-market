@@ -44,7 +44,9 @@ create table if not exists public.ads (
   created_at timestamptz not null default now(),
   expires_at timestamptz,
   marked_sold_at timestamptz,
-  view_count bigint not null default 0
+  view_count bigint not null default 0,
+  moderation_note text,
+  moderation_note_at timestamptz
 );
 
 create index if not exists ads_status_created_at_idx on public.ads (status, created_at desc);

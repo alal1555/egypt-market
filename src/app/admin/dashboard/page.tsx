@@ -8,25 +8,15 @@ import { notifyPendingAdsChanged } from "@/hooks/usePendingAdsCount";
 import { useTranslation } from "@/i18n/LocaleProvider";
 import { adminAr } from "@/i18n/content/admin.ar";
 import { adminEn, type AdminContent } from "@/i18n/content/admin.en";
-import { Shield, Users, FileText, UserPlus, UserMinus, Crown, ChevronDown, ChevronUp, MapPin, Tag, Hourglass, Eye, Ban } from "lucide-react";
+import { Shield, Users, FileText, UserPlus, UserMinus, Crown, ChevronDown, ChevronUp, MapPin, Eye, Ban, Hourglass } from "lucide-react";
+import AdminAdReviewPanel, { type AdminReviewAd } from "@/components/AdminAdReviewPanel";
 
-interface Ad {
-  id: string;
-  title: string;
-  price: number;
-  location: string;
-  status: string;
-  description?: string;
-  images?: string[];
-  created_at: string;
-  expires_at?: string | null;
-  listing_type?: string;
-  auction_duration_hours?: number | null;
+type Ad = AdminReviewAd & {
   auction_status?: string | null;
   auction_current_bid?: number | null;
   auction_bid_count?: number;
   auction_ends_at?: string | null;
-}
+};
 
 interface Profile {
   id: string;
@@ -51,24 +41,6 @@ function AdActionButtons({
     "font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs disabled:opacity-50";
   return (
     <div className={`flex flex-wrap gap-2 ${className}`}>
-      {ad.status === "pending" && (
-        <>
-          <button
-            type="button"
-            onClick={() => onUpdateStatus(ad.id, "active")}
-            className={`${btn} bg-green-600 hover:bg-green-700 text-white`}
-          >
-            {c.approve}
-          </button>
-          <button
-            type="button"
-            onClick={() => onUpdateStatus(ad.id, "banned")}
-            className={`${btn} bg-red-50 hover:bg-red-100 text-red-600 shadow-none`}
-          >
-            {c.reject}
-          </button>
-        </>
-      )}
       {ad.status === "active" && (
         <button
           type="button"
@@ -87,75 +59,6 @@ function AdActionButtons({
           {c.restore}
         </button>
       )}
-    </div>
-  );
-}
-
-function AdExpandedPanel({
-  ad,
-  c,
-  egpLabel,
-}: {
-  ad: Ad;
-  c: AdminContent;
-  egpLabel: string;
-}) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
-            {c.listingDescription}
-          </h4>
-          <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-xl border border-gray-100 shadow-2xs">
-            {ad.description || c.noDescription}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-          <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
-            <MapPin size={12} className="text-gray-400 shrink-0" /> {ad.location}
-          </span>
-          <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
-            <Tag size={12} className="text-orange-500 shrink-0" /> {ad.price} {egpLabel}
-          </span>
-          {ad.expires_at && ad.status === "active" && (
-            <span className="flex items-center gap-1 bg-white border px-2.5 py-1 rounded-md">
-              <Hourglass size={12} className="text-gray-400 shrink-0" />
-              {c.liveUntil.replace("{date}", new Date(ad.expires_at).toLocaleDateString())}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
-          {c.imageGallery}
-        </h4>
-        {ad.images && ad.images.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2">
-            {ad.images.map((imgUrl, idx) => (
-              <a
-                key={idx}
-                href={imgUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="group block relative overflow-hidden bg-gray-100 rounded-xl border border-gray-200 aspect-square"
-              >
-                <img
-                  src={imgUrl}
-                  alt={`Ad ${idx + 1}`}
-                  className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
-                />
-              </a>
-            ))}
-          </div>
-        ) : (
-          <div className="text-xs text-gray-400 border border-dashed rounded-xl p-6 text-center bg-white">
-            {c.noImages}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -228,6 +131,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [expandedAdId, setExpandedAdId] = useState<string | null>(null);
+  const [makesMap, setMakesMap] = useState<Record<number, string>>({});
+  const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
   const router = useRouter();
   const { locale, t } = useTranslation();
   const c = locale === "ar" ? adminAr : adminEn;
@@ -253,10 +158,23 @@ export default function AdminDashboard() {
 
       setCurrentRole(profile.role);
 
-      const { data: listings } = await supabase
-        .from("ads")
-        .select("id, title, price, location, status, description, images, created_at, expires_at, listing_type, auction_duration_hours, auction_status, auction_current_bid, auction_bid_count, auction_ends_at")
-        .order("created_at", { ascending: false });
+      const [{ data: listings }, makesRes, modelsRes] = await Promise.all([
+        supabase
+          .from("ads")
+          .select(
+            "id, title, price, location, status, description, images, created_at, expires_at, category_slug, seller_phone, attributes, listing_type, auction_duration_hours, auction_status, auction_current_bid, auction_bid_count, auction_ends_at, moderation_note, moderation_note_at",
+          )
+          .order("created_at", { ascending: false }),
+        supabase.from("makes").select("id, name"),
+        supabase.from("models").select("id, name"),
+      ]);
+
+      if (makesRes.data) {
+        setMakesMap(Object.fromEntries(makesRes.data.map((m) => [m.id, m.name])));
+      }
+      if (modelsRes.data) {
+        setModelsMap(Object.fromEntries(modelsRes.data.map((m) => [m.id, m.name])));
+      }
 
       let userProfiles: Profile[] = [];
       if (profile.role === "super") {
@@ -280,6 +198,15 @@ export default function AdminDashboard() {
     verifyAdminAndFetchAll();
   }, [router]);
 
+  const displayedAds = ads.filter((ad) => ad.status === adFilter);
+
+  useEffect(() => {
+    if (adFilter !== "pending") return;
+    const pending = ads.filter((a) => a.status === "pending");
+    if (pending.length === 0) return;
+    setExpandedAdId((prev) => (prev && pending.some((a) => a.id === prev) ? prev : pending[0].id));
+  }, [adFilter, ads]);
+
   const toggleExpandAd = (id: string) => {
     setExpandedAdId(expandedAdId === id ? null : id);
   };
@@ -301,7 +228,14 @@ export default function AdminDashboard() {
       expires_at?: string;
       auction_status?: string;
       auction_ends_at?: string;
+      moderation_note?: null;
+      moderation_note_at?: null;
     } = { status: newStatus };
+
+    if (newStatus === "active") {
+      updates.moderation_note = null;
+      updates.moderation_note_at = null;
+    }
 
     if (newStatus === "active" && (!current?.expires_at || current.status === "banned")) {
       if (current?.listing_type === "auction") {
@@ -329,9 +263,27 @@ export default function AdminDashboard() {
       setExpandedAdId(null);
       notifyPendingAdsChanged();
     }
-    router.refresh(); 
-    // OR, if that doesn't work, force a full reload:
-    window.location.reload();
+    router.refresh();
+  };
+
+  const handleSaveModerationNote = async (adId: string, note: string): Promise<boolean> => {
+    const at = new Date().toISOString();
+    const { error } = await supabase
+      .from("ads")
+      .update({ moderation_note: note, moderation_note_at: at })
+      .eq("id", adId);
+
+    if (error) {
+      alert(c.dbError.replace("{message}", error.message));
+      return false;
+    }
+
+    setAds((prev) =>
+      prev.map((ad) =>
+        ad.id === adId ? { ...ad, moderation_note: note, moderation_note_at: at } : ad,
+      ),
+    );
+    return true;
   };
 
   const handleUpdateUserRole = async (userId: string, newRole: "admin" | "user" | "super") => {
@@ -363,7 +315,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const displayedAds = ads.filter((ad) => ad.status === adFilter);
   const displayedProfiles =
     userRoleFilter === "all"
       ? profiles
@@ -501,17 +452,34 @@ export default function AdminDashboard() {
                           </div>
                         </button>
 
-                        <AdActionButtons
-                          ad={ad}
-                          c={c}
-                          onUpdateStatus={handleUpdateStatus}
-                          className="mt-3"
-                        />
+                        {ad.status !== "pending" && (
+                          <AdActionButtons
+                            ad={ad}
+                            c={c}
+                            onUpdateStatus={handleUpdateStatus}
+                            className="mt-3"
+                          />
+                        )}
 
                         {isExpanded && (
                           <div className="mt-4 pt-4 border-t border-gray-100 border-l-4 border-orange-500 pl-3">
-                            <AdExpandedPanel ad={ad} c={c} egpLabel={t("common.egp")} />
+                            <AdminAdReviewPanel
+                              ad={ad}
+                              c={c}
+                              egpLabel={t("common.egp")}
+                              locale={locale}
+                              t={t}
+                              makesMap={makesMap}
+                              modelsMap={modelsMap}
+                              showPendingActions
+                              onUpdateStatus={handleUpdateStatus}
+                              onSaveModerationNote={handleSaveModerationNote}
+                            />
                           </div>
+                        )}
+
+                        {!isExpanded && ad.status === "pending" && (
+                          <p className="text-xs text-amber-700 mt-2 font-medium">{c.expandToReview}</p>
                         )}
                       </div>
                     );
@@ -546,20 +514,35 @@ export default function AdminDashboard() {
                               {ad.price} {t("common.egp")}
                             </td>
                             <td className="p-4 text-gray-500">{ad.location}</td>
-                            <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                              <AdActionButtons
-                                ad={ad}
-                                c={c}
-                                onUpdateStatus={handleUpdateStatus}
-                                className="justify-end"
-                              />
+                            <td className="p-4 text-right text-xs text-gray-500" onClick={(e) => e.stopPropagation()}>
+                              {ad.status === "pending" ? (
+                                <span className="italic">{c.expandToReview}</span>
+                              ) : (
+                                <AdActionButtons
+                                  ad={ad}
+                                  c={c}
+                                  onUpdateStatus={handleUpdateStatus}
+                                  className="justify-end"
+                                />
+                              )}
                             </td>
                           </tr>
 
                           {isExpanded && (
                             <tr className="bg-gray-50/60 shadow-inner">
                               <td colSpan={5} className="p-6 border-l-4 border-orange-500">
-                                <AdExpandedPanel ad={ad} c={c} egpLabel={t("common.egp")} />
+                                <AdminAdReviewPanel
+                                  ad={ad}
+                                  c={c}
+                                  egpLabel={t("common.egp")}
+                                  locale={locale}
+                                  t={t}
+                                  makesMap={makesMap}
+                                  modelsMap={modelsMap}
+                                  showPendingActions
+                                  onUpdateStatus={handleUpdateStatus}
+                                  onSaveModerationNote={handleSaveModerationNote}
+                                />
                               </td>
                             </tr>
                           )}

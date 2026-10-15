@@ -32,10 +32,12 @@ export type MyAdRow = {
   auction_bid_count?: number | null;
   auction_ends_at?: string | null;
   marked_sold_at?: string | null;
+  moderation_note?: string | null;
+  moderation_note_at?: string | null;
 };
 
 const MY_ADS_SELECT =
-  "id,title,price,location,description,seller_phone,category_slug,images,status,attributes,created_at,expires_at,listing_type,auction_status,auction_current_bid,auction_bid_count,auction_ends_at,marked_sold_at";
+  "id,title,price,location,description,seller_phone,category_slug,images,status,attributes,created_at,expires_at,listing_type,auction_status,auction_current_bid,auction_bid_count,auction_ends_at,marked_sold_at,moderation_note,moderation_note_at";
 
 export async function restFetchMyAds(accessToken: string, userId: string): Promise<MyAdRow[]> {
   const url =

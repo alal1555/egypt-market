@@ -391,6 +391,8 @@ export const en = {
     edit: "Edit",
     delete: "Delete",
     deleteFailed: "Could not delete listing.",
+    moderationNoteTitle: "Note from Yaddii team",
+    moderationNoteHint: "Edit your listing and save. We will review it again after you update.",
   },
   editAd: {
     unauthorized: "Unauthorized or not found",
@@ -399,7 +401,7 @@ export const en = {
     updateFailed: "Update failed: ",
     title: "Edit Listing",
     pendingWarning: "Saving changes will remove this ad from the marketplace until an admin approves it again.",
-    titleLabel: "Ad title",
+    titleLabel: "Listing name",
     titlePlaceholder: "What are you selling?",
     priceLabel: "Price",
     pricePlaceholder: "Price (EGP)",

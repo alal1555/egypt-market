@@ -27,10 +27,11 @@ In **Supabase Dashboard → SQL Editor**, run in order:
 4. [`ad-expiry.sql`](./ad-expiry.sql) — listing `expires_at`, 30-day visibility, `renew_ad` RPC
 5. [`marked-sold.sql`](./marked-sold.sql) — seller `marked_sold_at` for SOLD stamp on listings
 6. [`ad-views.sql`](./ad-views.sql) — `view_count` on ads + `increment_ad_view` RPC
-7. [`auction.sql`](./auction.sql) — optional timed auctions (مزاد), bids, `place_auction_bid` RPC
-8. [`top-up.sql`](./top-up.sql) — Paymob wallet top-up + `apply_top_up` RPC
-9. [`schema-alignment.sql`](./schema-alignment.sql) — fix live drift (orphan ads, legacy columns, NOT NULL, duplicate RLS)
-10. [`admin-users.sql`](./admin-users.sql) — super admin user list with emails (`admin_list_users` RPC)
+7. [`moderation-note.sql`](./moderation-note.sql) — admin `moderation_note` to seller before approval
+8. [`auction.sql`](./auction.sql) — optional timed auctions (مزاد), bids, `place_auction_bid` RPC
+9. [`top-up.sql`](./top-up.sql) — Paymob wallet top-up + `apply_top_up` RPC
+10. [`schema-alignment.sql`](./schema-alignment.sql) — fix live drift (orphan ads, legacy columns, NOT NULL, duplicate RLS)
+11. [`admin-users.sql`](./admin-users.sql) — admin user list with emails (`admin_list_users` RPC)
 
 If tables already exist, compare columns and add missing ones manually instead of re-running `create table`.
 

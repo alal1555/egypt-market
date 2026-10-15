@@ -219,6 +219,16 @@ export default function MyAdsPage() {
                 }
               />
 
+              {ad.status === "pending" && ad.moderation_note?.trim() && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950">
+                  <p className="font-bold text-xs uppercase tracking-wide mb-1">
+                    {t("myAds.moderationNoteTitle")}
+                  </p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{ad.moderation_note}</p>
+                  <p className="text-xs text-amber-800 mt-2">{t("myAds.moderationNoteHint")}</p>
+                </div>
+              )}
+
               {ad.status === "active" && ad.expires_at && (
                 <p className={`text-xs mt-3 flex items-center gap-1 ${expired ? "text-red-600 font-bold" : "text-gray-500"}`}>
                   <CalendarClock size={14} />
