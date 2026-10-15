@@ -9,6 +9,7 @@ import { useTranslation } from "@/i18n/LocaleProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import AdminPendingBadge from "@/components/AdminPendingBadge";
 import { usePendingAdsCount } from "@/hooks/usePendingAdsCount";
+import { useUnreadModerationNotesCount } from "@/hooks/useUnreadModerationNotesCount";
 import { useAuthSession } from "@/hooks/useAuthSession";
 
 function NavbarContent() {
@@ -20,6 +21,7 @@ function NavbarContent() {
   const { user, userRole, loggingOut, logout } = useAuthSession();
   const isAdmin = userRole === "admin" || userRole === "super";
   const pendingAdsCount = usePendingAdsCount(userRole);
+  const moderationNotesCount = useUnreadModerationNotesCount(user?.id);
 
   // Sync the search input with the URL 'q' parameter
   useEffect(() => {
@@ -115,9 +117,24 @@ function NavbarContent() {
                 <span>{t("nav.favorites")}</span>
               </Link>
 
-              <Link href="/my-ads" className="p-1.5 text-gray-600 hover:text-[#FF6321] font-bold text-sm flex items-center gap-1">
-                <LayoutGrid size={18} />
-                <span>{t("nav.myAds")}</span>
+              <Link
+                href="/my-ads"
+                aria-label={
+                  moderationNotesCount > 0
+                    ? t("nav.moderationNotesBadge", { count: moderationNotesCount })
+                    : undefined
+                }
+                className="relative p-1.5 text-gray-600 hover:text-[#FF6321] font-bold text-sm flex items-center gap-1"
+              >
+                <span className="relative inline-flex items-center gap-1 pe-0.5">
+                  <LayoutGrid size={18} />
+                  <span>{t("nav.myAds")}</span>
+                  <AdminPendingBadge
+                    count={moderationNotesCount}
+                    toneClass="bg-amber-500"
+                    className="-top-2 -end-3"
+                  />
+                </span>
               </Link>
 
               <Link href="/profile" prefetch={false} className="p-1.5 text-gray-600 hover:text-[#FF6321] font-bold text-sm flex items-center gap-1">

@@ -6,6 +6,7 @@ import { Compass, Heart, LayoutGrid, PlusCircle, Shield, Crown } from "lucide-re
 import { useTranslation } from "@/i18n/LocaleProvider";
 import AdminPendingBadge from "@/components/AdminPendingBadge";
 import { usePendingAdsCount } from "@/hooks/usePendingAdsCount";
+import { useUnreadModerationNotesCount } from "@/hooks/useUnreadModerationNotesCount";
 import { useAuthSession } from "@/hooks/useAuthSession";
 
 export default function BottomNav() {
@@ -14,6 +15,7 @@ export default function BottomNav() {
   const { user, userRole } = useAuthSession();
   const isAdmin = userRole === "admin" || userRole === "super";
   const pendingAdsCount = usePendingAdsCount(userRole);
+  const moderationNotesCount = useUnreadModerationNotesCount(user?.id);
 
   // Helper function to highlight the active tab
   const isActive = (path: string) => pathname === path;
@@ -57,11 +59,23 @@ export default function BottomNav() {
       {/* My Ads */}
       <Link 
         href="/my-ads" 
+        aria-label={
+          moderationNotesCount > 0
+            ? t("nav.moderationNotesBadge", { count: moderationNotesCount })
+            : undefined
+        }
         className={`relative z-10 flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
           isActive("/my-ads") ? "text-[#FF6321]" : "text-gray-500"
         }`}
       >
-        <LayoutGrid size={20} strokeWidth={isActive("/my-ads") ? 2.5 : 2} />
+        <span className="relative">
+          <LayoutGrid size={20} strokeWidth={isActive("/my-ads") ? 2.5 : 2} />
+          <AdminPendingBadge
+            count={moderationNotesCount}
+            toneClass="bg-amber-500"
+            className="-top-1.5 -end-2"
+          />
+        </span>
         <span className="text-[10px] font-bold mt-0.5">{t("nav.myAds")}</span>
       </Link>
 

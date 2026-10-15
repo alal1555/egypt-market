@@ -15,6 +15,7 @@ export const ar = {
     supremeAdmin: "المدير الأعلى",
     admin: "إدارة",
     pendingAdsBadge: "{count} إعلان بانتظار الموافقة",
+    moderationNotesBadge: "{count} إعلان فيه ملاحظة جديدة من يدي",
   },
   footer: {
     tagline: "اشتري وبيع سيارات وعقارات وإلكترونيات والمزيد في جميع أنحاء مصر.",
@@ -392,7 +393,10 @@ export const ar = {
     delete: "حذف",
     deleteFailed: "تعذّر حذف الإعلان.",
     moderationNoteTitle: "ملاحظة من الإدارة",
+    moderationNoteNew: "جديد",
     moderationNoteHint: "عدّل الإعلان ثم احفظ. سيُراجع مرة أخرى بعد التعديل.",
+    unreadModerationBanner:
+      "لديك {count} إعلان فيه ملاحظة جديدة من الفريق — مرّر لأسفل لقراءتها.",
   },
   editAd: {
     unauthorized: "غير مصرح أو غير موجود",

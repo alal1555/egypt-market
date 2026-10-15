@@ -15,6 +15,7 @@ export const en = {
     supremeAdmin: "Supreme Admin",
     admin: "Admin",
     pendingAdsBadge: "{count} ads pending approval",
+    moderationNotesBadge: "{count} listing(s) with a new note from Yaddii",
   },
   footer: {
     tagline: "Buy and sell cars, properties, electronics, and more across Egypt.",
@@ -392,7 +393,10 @@ export const en = {
     delete: "Delete",
     deleteFailed: "Could not delete listing.",
     moderationNoteTitle: "Note from Yaddii team",
+    moderationNoteNew: "New",
     moderationNoteHint: "Edit your listing and save. We will review it again after you update.",
+    unreadModerationBanner:
+      "You have {count} listing(s) with a new note from our team — scroll down to read them.",
   },
   editAd: {
     unauthorized: "Unauthorized or not found",

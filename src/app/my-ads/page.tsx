@@ -21,6 +21,13 @@ import { useTranslation } from "@/i18n/LocaleProvider";
 import { getDisplayPrice, isAuctionFinished, isAuctionListing, isAuctionLive } from "@/constants/auction";
 import { formatWalletErrorLocalized } from "@/i18n/walletErrors";
 import ShareAdMenu from "@/components/ShareAdMenu";
+import MyAdModerationNote from "@/components/MyAdModerationNote";
+import {
+  countUnreadModerationNotes,
+  isModerationNoteUnread,
+  markModerationNoteSeen,
+  notifyModerationNotesChanged,
+} from "@/lib/moderation-note-seen";
 
 type Ad = MyAdRow;
 
@@ -33,6 +40,7 @@ export default function MyAdsPage() {
   const [soldToggleId, setSoldToggleId] = useState<string | null>(null);
   const [makesMap, setMakesMap] = useState<Record<number, string>>({});
   const [modelsMap, setModelsMap] = useState<Record<number, string>>({});
+  const [noteSeenTick, setNoteSeenTick] = useState(0);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -175,6 +183,12 @@ export default function MyAdsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
+      {countUnreadModerationNotes(ads) > 0 && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 font-medium">
+          {t("myAds.unreadModerationBanner", { count: countUnreadModerationNotes(ads) })}
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-extrabold text-gray-900">{t("myAds.title")}</h1>
         <Link href="/post-ad" className="flex items-center gap-2 bg-black text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-800 transition">
@@ -196,8 +210,21 @@ export default function MyAdsPage() {
             const auction = isAuctionListing(ad);
             const displayPrice = getDisplayPrice(ad);
 
+            const unreadNote = isModerationNoteUnread(ad);
+
             return (
-            <div key={ad.id} className="border rounded-2xl p-3 bg-white shadow-sm flex flex-col">
+            <div
+              key={`${ad.id}-${noteSeenTick}`}
+              className={`relative border rounded-2xl p-3 bg-white shadow-sm flex flex-col ${
+                unreadNote ? "border-amber-300" : ""
+              }`}
+            >
+              {unreadNote && (
+                <span
+                  className="absolute top-2 end-2 z-10 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white"
+                  aria-hidden
+                />
+              )}
               <AdCard
                 {...ad}
                 status={ad.status}
@@ -219,14 +246,14 @@ export default function MyAdsPage() {
                 }
               />
 
-              {ad.status === "pending" && ad.moderation_note?.trim() && (
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950">
-                  <p className="font-bold text-xs uppercase tracking-wide mb-1">
-                    {t("myAds.moderationNoteTitle")}
-                  </p>
-                  <p className="whitespace-pre-wrap leading-relaxed">{ad.moderation_note}</p>
-                  <p className="text-xs text-amber-800 mt-2">{t("myAds.moderationNoteHint")}</p>
-                </div>
+              {ad.status === "pending" && ad.moderation_note?.trim() && ad.moderation_note_at && (
+                <MyAdModerationNote
+                  ad={ad}
+                  onSeen={() => {
+                    setNoteSeenTick((n) => n + 1);
+                    notifyModerationNotesChanged();
+                  }}
+                />
               )}
 
               {ad.status === "active" && ad.expires_at && (
@@ -297,7 +324,17 @@ export default function MyAdsPage() {
                   </button>
                 )}
                 <div className="flex gap-2">
-                <Link href={`/my-ads/edit/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 py-2 rounded-xl text-sm font-bold transition">
+                <Link
+                  href={`/my-ads/edit/${ad.id}`}
+                  onClick={() => {
+                    if (ad.moderation_note_at && isModerationNoteUnread(ad)) {
+                      markModerationNoteSeen(ad.id, ad.moderation_note_at);
+                      notifyModerationNotesChanged();
+                      setNoteSeenTick((n) => n + 1);
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 py-2 rounded-xl text-sm font-bold transition"
+                >
                   <Edit3 size={16} /> {t("myAds.edit")}
                 </Link>
                 <button
